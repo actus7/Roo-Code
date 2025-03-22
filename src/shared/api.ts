@@ -18,6 +18,7 @@ export type ApiProvider =
 	| "requesty"
 	| "human-relay"
 	| "fake-ai"
+	| "flow"
 
 export interface ApiHandlerOptions {
 	apiModelId?: string
@@ -25,6 +26,11 @@ export interface ApiHandlerOptions {
 	anthropicBaseUrl?: string
 	vsCodeLmModelSelector?: vscode.LanguageModelChatSelector
 	glamaModelId?: string
+	flowClientId?: string
+	flowClientSecret?: string
+	flowTenant?: string
+	flowBaseUrl?: string
+	flowModelId?: FlowModelId
 	glamaModelInfo?: ModelInfo
 	glamaApiKey?: string
 	openRouterApiKey?: string
@@ -97,6 +103,8 @@ export const API_CONFIG_KEYS: GlobalStateKey[] = [
 	"vsCodeLmModelSelector",
 	"glamaModelId",
 	"glamaModelInfo",
+	"flowTenant",
+	"flowBaseUrl",
 	"openRouterModelId",
 	"openRouterModelInfo",
 	"openRouterBaseUrl",
@@ -174,7 +182,7 @@ export const anthropicModels = {
 		thinking: true,
 	},
 	"claude-3-7-sonnet-20250219": {
-		maxTokens: 8192,
+		maxTokens: 16_384,
 		contextWindow: 200_000,
 		supportsImages: true,
 		supportsComputerUse: true,
@@ -667,7 +675,7 @@ export const vertexModels = {
 		thinking: true,
 	},
 	"claude-3-7-sonnet@20250219": {
-		maxTokens: 8192,
+		maxTokens: 16_384,
 		contextWindow: 200_000,
 		supportsImages: true,
 		supportsComputerUse: true,
@@ -856,6 +864,53 @@ export const geminiModels = {
 // https://openai.com/api/pricing/
 export type OpenAiNativeModelId = keyof typeof openAiNativeModels
 export const openAiNativeDefaultModelId: OpenAiNativeModelId = "gpt-4o"
+
+// Flow Models
+export type FlowModelId = keyof typeof flowModels
+export const flowDefaultModelId: FlowModelId = "gpt-4o-mini"
+export const flowModels = {
+	"gpt-4o-mini": {
+		maxTokens: 4096,
+		contextWindow: 128000,
+		supportsImages: true,
+		supportsComputerUse: true,
+		supportsPromptCache: false,
+		inputPrice: 0.15,
+		outputPrice: 0.6,
+		description: "CI&T Flow GPT-4 Optimized Mini Model",
+	},
+	"gpt-4o": {
+		maxTokens: 8192,
+		contextWindow: 128000,
+		supportsImages: true,
+		supportsComputerUse: true,
+		supportsPromptCache: false,
+		inputPrice: 2.5,
+		outputPrice: 10.0,
+		description: "CI&T Flow GPT-4 Optimized Model",
+	},
+	"gemini-1.5-flash": {
+		maxTokens: 8192,
+		contextWindow: 128000,
+		supportsImages: true,
+		supportsComputerUse: true,
+		supportsPromptCache: false,
+		inputPrice: 0.075,
+		outputPrice: 0.3,
+		description: "CI&T Flow Gemini 1.5 Flash Model",
+	},
+	"anthropic.claude-35-sonnet": {
+		maxTokens: 8192,
+		contextWindow: 200000,
+		supportsImages: true,
+		supportsComputerUse: true,
+		supportsPromptCache: false,
+		inputPrice: 3.0,
+		outputPrice: 15.0,
+		description: "CI&T Flow Claude 3.5 Sonnet Model",
+	},
+} as const satisfies Record<string, ModelInfo>
+
 export const openAiNativeModels = {
 	// don't support tool use yet
 	"o3-mini": {

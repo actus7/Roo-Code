@@ -37,6 +37,8 @@ import {
 	requestyDefaultModelId,
 	requestyDefaultModelInfo,
 	ApiProvider,
+	flowDefaultModelId,
+	flowModels,
 } from "../../../../src/shared/api"
 import { ExtensionMessage } from "../../../../src/shared/ExtensionMessage"
 
@@ -1185,6 +1187,68 @@ const ApiOptions = ({
 				</>
 			)}
 
+			{selectedProvider === "flow" && (
+				<>
+					<VSCodeTextField
+						value={apiConfiguration?.flowClientId || ""}
+						type="password"
+						onInput={handleInputChange("flowClientId")}
+						placeholder="Digite o Client ID..."
+						className="w-full">
+						<span className="font-medium">Flow Client ID</span>
+					</VSCodeTextField>
+					<VSCodeTextField
+						value={apiConfiguration?.flowClientSecret || ""}
+						type="password"
+						onInput={handleInputChange("flowClientSecret")}
+						placeholder="Digite o Client Secret..."
+						className="w-full">
+						<span className="font-medium">Flow Client Secret</span>
+					</VSCodeTextField>
+					<VSCodeTextField
+						value={apiConfiguration?.flowTenant || ""}
+						onInput={handleInputChange("flowTenant")}
+						placeholder="Digite o Tenant..."
+						className="w-full">
+						<span className="font-medium">Flow Tenant</span>
+					</VSCodeTextField>
+					<VSCodeTextField
+						value={apiConfiguration?.flowBaseUrl || ""}
+						type="url"
+						onInput={handleInputChange("flowBaseUrl")}
+						placeholder="Padrão: https://flow.ciandt.com"
+						className="w-full">
+						<span className="font-medium">Flow Base URL (Opcional)</span>
+					</VSCodeTextField>
+					{apiConfiguration?.flowClientId && apiConfiguration?.flowClientSecret ? (
+						<ModelPicker
+							apiConfiguration={apiConfiguration}
+							setApiConfigurationField={setApiConfigurationField}
+							defaultModelId={flowDefaultModelId}
+							defaultModelInfo={flowModels[flowDefaultModelId]}
+							models={MODELS_BY_PROVIDER.flow || {}}
+							modelIdKey="flowModelId"
+							modelInfoKey="openAiCustomModelInfo"
+							serviceName="Flow"
+							serviceUrl="https://flow.ciandt.com"
+						/>
+					) : (
+						<div className="text-sm text-vscode-descriptionForeground">
+							Para selecionar um modelo, insira suas credenciais Flow primeiro.
+						</div>
+					)}
+					<div className="text-sm text-vscode-descriptionForeground -mt-2">
+						Essas credenciais são armazenadas localmente e usadas apenas para fazer requisições de API desta
+						extensão.
+					</div>
+					{!apiConfiguration?.flowClientId && (
+						<VSCodeButtonLink href="https://flow.ciandt.com/settings/api-keys" appearance="secondary">
+							Obter Credenciais do Flow
+						</VSCodeButtonLink>
+					)}
+				</>
+			)}
+
 			{selectedProvider === "deepseek" && (
 				<>
 					<VSCodeTextField
@@ -1645,6 +1709,8 @@ export function normalizeApiConfiguration(apiConfiguration?: ApiConfiguration) {
 					supportsImages: false, // VSCode LM API currently doesn't support images.
 				},
 			}
+		case "flow":
+			return getProviderData(flowModels, flowDefaultModelId)
 		default:
 			return getProviderData(anthropicModels, anthropicDefaultModelId)
 	}

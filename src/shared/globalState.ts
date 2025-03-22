@@ -26,6 +26,8 @@ export const SECRET_KEYS = [
 	"mistralApiKey",
 	"unboundApiKey",
 	"requestyApiKey",
+	"flowClientId",
+	"flowClientSecret",
 ] as const
 
 type CheckSecretKeysExhaustiveness = Exclude<SecretKey, (typeof SECRET_KEYS)[number]> extends never ? true : false
@@ -35,6 +37,12 @@ const _checkSecretKeysExhaustiveness: CheckSecretKeysExhaustiveness = true
 export const GLOBAL_STATE_KEYS = [
 	"apiProvider",
 	"apiModelId",
+	"flowModelId",
+	"flowBaseUrl",
+	"flowClientId",
+	"flowClientSecret",
+	"flowTenant",
+	"flowModelType",
 	"glamaModelId",
 	"glamaModelInfo",
 	"awsRegion",

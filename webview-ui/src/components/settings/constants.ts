@@ -4,6 +4,7 @@ import {
 	anthropicModels,
 	bedrockModels,
 	deepSeekModels,
+	flowModels,
 	geminiModels,
 	mistralModels,
 	openAiNativeModels,
@@ -11,6 +12,7 @@ import {
 } from "../../../../src/shared/api"
 
 export const MODELS_BY_PROVIDER: Partial<Record<ApiProvider, Record<string, ModelInfo>>> = {
+	flow: flowModels,
 	anthropic: anthropicModels,
 	bedrock: bedrockModels,
 	deepseek: deepSeekModels,
@@ -20,8 +22,16 @@ export const MODELS_BY_PROVIDER: Partial<Record<ApiProvider, Record<string, Mode
 	vertex: vertexModels,
 }
 
+export const FLOW_MODEL_TYPES = [
+	{ value: "openai", label: "OpenAI" },
+	{ value: "google", label: "Google (Gemini)" },
+	{ value: "bedrock", label: "Bedrock (Claude)" },
+]
+
 export const PROVIDERS = [
-	{ value: "anthropic", label: "Anthropic" },
+	{ value: "flow", label: "CI&T Flow" },
+	{ value: "vscode-lm", label: "VS Code LM API" },
+	{ value: "human-relay", label: "Human Relay" },
 	{ value: "gemini", label: "Google Gemini" },
 	{ value: "deepseek", label: "DeepSeek" },
 	{ value: "openai-native", label: "OpenAI" },
@@ -29,14 +39,25 @@ export const PROVIDERS = [
 	{ value: "vertex", label: "GCP Vertex AI" },
 	{ value: "bedrock", label: "AWS Bedrock" },
 	{ value: "glama", label: "Glama" },
-	{ value: "vscode-lm", label: "VS Code LM API" },
+	{ value: "anthropic", label: "Anthropic" },
 	{ value: "mistral", label: "Mistral" },
 	{ value: "lmstudio", label: "LM Studio" },
 	{ value: "ollama", label: "Ollama" },
 	{ value: "unbound", label: "Unbound" },
 	{ value: "requesty", label: "Requesty" },
-	{ value: "human-relay", label: "Human Relay" },
 ].sort((a, b) => a.label.localeCompare(b.label))
+
+export const FLOW_CONFIG = {
+	apiEndpoints: {
+		models: "/ai-orchestration-api/v1/models",
+		openai: "/ai-orchestration-api/v1/openai/chat/completions",
+		google: "/ai-orchestration-api/v1/google/generateContent",
+		bedrock: "/ai-orchestration-api/v1/bedrock/invoke",
+		generateToken: "/auth-engine-api/v1/api-key/token",
+	},
+	defaultTenant: "edge",
+	defaultBaseUrl: "https://flow.ciandt.com",
+}
 
 export const AWS_REGIONS = [
 	{ value: "us-east-1", label: "us-east-1" },

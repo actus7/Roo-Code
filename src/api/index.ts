@@ -21,6 +21,7 @@ import { UnboundHandler } from "./providers/unbound"
 import { RequestyHandler } from "./providers/requesty"
 import { HumanRelayHandler } from "./providers/human-relay"
 import { FakeAIHandler } from "./providers/fake-ai"
+import { FlowHandler } from "./providers/flow"
 
 export interface SingleCompletionHandler {
 	completePrompt(prompt: string): Promise<string>
@@ -78,6 +79,8 @@ export function buildApiHandler(configuration: ApiConfiguration): ApiHandler {
 			return new HumanRelayHandler(options)
 		case "fake-ai":
 			return new FakeAIHandler(options)
+		case "flow":
+			return new FlowHandler(options)
 		default:
 			return new AnthropicHandler(options)
 	}
