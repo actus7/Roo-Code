@@ -39,13 +39,16 @@ let extensionContext: vscode.ExtensionContext
 // This method is called when your extension is activated.
 // Your extension is activated the very first time the command is executed.
 export function activate(context: vscode.ExtensionContext) {
+	console.log("Roo-Code extension activation started");
 	extensionContext = context
 	outputChannel = vscode.window.createOutputChannel("Roo-Code")
 	context.subscriptions.push(outputChannel)
 	outputChannel.appendLine("Roo-Code extension activated")
 
 	// Initialize telemetry service after environment variables are loaded.
+	console.log("Initializing telemetry service");
 	telemetryService.initialize()
+	console.log("Telemetry service initialized");
 
 	// Initialize i18n for internationalization support
 	initializeI18n(context.globalState.get("language") ?? formatLanguage(vscode.env.language))

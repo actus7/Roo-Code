@@ -163,6 +163,8 @@ export type SecretKey =
 	| "mistralApiKey"
 	| "unboundApiKey"
 	| "requestyApiKey"
+	| "flowClientId"
+ 	| "flowClientSecret"
 
 export type GlobalStateKey =
 	| "apiProvider"
@@ -257,6 +259,12 @@ export type GlobalStateKey =
 	| "language"
 	| "maxReadFileLine"
 	| "fakeAi"
+	| "flowTenant"
+	| "flowBaseUrl"
+	| "flowModelId"
+	| "flowClientId"
+	| "flowClientSecret"
+	| "flowModelType"
 
 export type ConfigurationKey = GlobalStateKey | SecretKey
 

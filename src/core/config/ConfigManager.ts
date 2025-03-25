@@ -44,30 +44,54 @@ export class ConfigManager {
 	 * Initialize config if it doesn't exist
 	 */
 	async initConfig(): Promise<void> {
-		try {
-			return await this.lock(async () => {
-				const config = await this.readConfig()
-				if (!config) {
-					await this.writeConfig(this.defaultConfig)
-					return
-				}
-
-				// Migrate: ensure all configs have IDs
-				let needsMigration = false
-				for (const [name, apiConfig] of Object.entries(config.apiConfigs)) {
-					if (!apiConfig.id) {
-						apiConfig.id = this.generateId()
-						needsMigration = true
-					}
-				}
-
-				if (needsMigration) {
-					await this.writeConfig(config)
-				}
-			})
-		} catch (error) {
-			throw new Error(`Failed to initialize config: ${error}`)
-		}
+	try {
+	return await this.lock(async () => {
+	  console.log("[ConfigManager] Initializing configuration");
+	  const config = await this.readConfig()
+	  if (!config) {
+	    console.log("[ConfigManager] No configuration found, using default");
+	    await this.writeConfig(this.defaultConfig)
+	    return
+	  }
+	
+	  let needsMigration = false
+	  
+	  // Migrate: ensure all configs have IDs and validate Flow configurations
+	  for (const [name, apiConfig] of Object.entries(config.apiConfigs)) {
+	    console.log(`[ConfigManager] Checking config '${name}'`, {
+	      provider: apiConfig.apiProvider,
+	      hasId: !!apiConfig.id,
+	      isFlow: apiConfig.apiProvider === 'flow'
+	    });
+	
+	    if (!apiConfig.id) {
+	      apiConfig.id = this.generateId()
+	      needsMigration = true
+	    }
+	
+	    // Special handling for Flow configurations
+	    if (apiConfig.apiProvider === 'flow') {
+	      console.log(`[ConfigManager] Validating Flow config '${name}'`, {
+	        hasFlowTenant: 'flowTenant' in apiConfig,
+	        flowTenant: apiConfig.flowTenant
+	      });
+	
+	      // Ensure Flow configuration is preserved
+	      if (!apiConfig.flowTenant) {
+	        console.warn(`[ConfigManager] Flow config '${name}' is missing tenant`);
+	      }
+	    }
+	  }
+	
+	  if (needsMigration) {
+	    console.log("[ConfigManager] Configuration requires migration");
+	    await this.writeConfig(config)
+	  }
+	})
+	} catch (error) {
+	  console.error("[ConfigManager] Error initializing config:", error);
+	  throw new Error(`Failed to initialize config: ${error}`)
+	}
 	}
 
 	/**
@@ -92,42 +116,100 @@ export class ConfigManager {
 	 * Save a config with the given name
 	 */
 	async saveConfig(name: string, config: ApiConfiguration): Promise<void> {
-		try {
-			return await this.lock(async () => {
-				const currentConfig = await this.readConfig()
-				const existingConfig = currentConfig.apiConfigs[name]
-				currentConfig.apiConfigs[name] = {
-					...config,
-					id: existingConfig?.id || this.generateId(),
-				}
-				await this.writeConfig(currentConfig)
-			})
-		} catch (error) {
-			throw new Error(`Failed to save config: ${error}`)
-		}
+	try {
+	return await this.lock(async () => {
+	  console.log("[ConfigManager] Starting saveConfig", {
+	    name,
+	    configKeys: Object.keys(config),
+	    hasFlowTenant: 'flowTenant' in config
+	  });
+	
+	  const currentConfig = await this.readConfig();
+	  console.log("[ConfigManager] Current config loaded", {
+	    existingNames: Object.keys(currentConfig.apiConfigs)
+	  });
+	
+	  const existingConfig = currentConfig.apiConfigs[name];
+	  console.log("[ConfigManager] Existing config found:", !!existingConfig);
+	
+	  // Validate Flow configuration before saving
+	  if (config.apiProvider === 'flow') {
+	    console.log("[ConfigManager] Validating Flow configuration");
+	    if (!config.flowTenant) {
+	      console.error("[ConfigManager] Missing required Flow Tenant");
+	      throw new Error("Flow Tenant is required for Flow provider configuration");
+	    }
+	  }
+	
+	  // Preserve existing config properties and merge with new ones
+	  currentConfig.apiConfigs[name] = {
+	    ...(existingConfig || {}),  // Preserve existing properties
+	    ...config,                  // Override with new properties
+	    id: existingConfig?.id || this.generateId(),
+	    flowTenant: config.flowTenant || existingConfig?.flowTenant,  // Explicitly preserve flowTenant
+	    flowBaseUrl: config.flowBaseUrl || existingConfig?.flowBaseUrl,  // Preserve baseUrl
+	    flowAuthBaseUrl: config.flowAuthBaseUrl || existingConfig?.flowAuthBaseUrl  // Preserve authBaseUrl
+	  };
+	
+	  console.log("[ConfigManager] Final config object:", {
+	    configName: name,
+	    hasFlowTenant: 'flowTenant' in currentConfig.apiConfigs[name],
+	    flowTenant: currentConfig.apiConfigs[name].flowTenant,
+	    id: currentConfig.apiConfigs[name].id
+	  });
+	
+	  console.log("[ConfigManager] New config prepared", {
+	    id: currentConfig.apiConfigs[name].id,
+	    hasFlowTenant: 'flowTenant' in currentConfig.apiConfigs[name]
+	  });
+	
+	  await this.writeConfig(currentConfig);
+	  console.log("[ConfigManager] Config saved successfully");
+	})
+	} catch (error) {
+	console.error("[ConfigManager] Error in saveConfig:", error);
+	throw new Error(`Failed to save config: ${error}`)
+	}
 	}
 
 	/**
 	 * Load a config by name
 	 */
 	async loadConfig(name: string): Promise<ApiConfiguration> {
-		try {
-			return await this.lock(async () => {
-				const config = await this.readConfig()
-				const apiConfig = config.apiConfigs[name]
-
-				if (!apiConfig) {
-					throw new Error(`Config '${name}' not found`)
-				}
-
-				config.currentApiConfigName = name
-				await this.writeConfig(config)
-
-				return apiConfig
-			})
-		} catch (error) {
-			throw new Error(`Failed to load config: ${error}`)
-		}
+	try {
+	return await this.lock(async () => {
+	  console.log(`[ConfigManager] Loading config: ${name}`);
+	  const config = await this.readConfig()
+	  const apiConfig = config.apiConfigs[name]
+	
+	  if (!apiConfig) {
+	    console.error(`[ConfigManager] Config '${name}' not found`);
+	    throw new Error(`Config '${name}' not found`)
+	  }
+	
+	  // Validate Flow configuration when loading
+	  if (apiConfig.apiProvider === 'flow') {
+	    console.log('[ConfigManager] Validating Flow configuration on load:', {
+	      hasFlowTenant: 'flowTenant' in apiConfig,
+	      flowTenant: apiConfig.flowTenant,
+	      hasBaseUrl: 'flowBaseUrl' in apiConfig
+	    });
+	
+	    // Ensure required Flow fields are present
+	    if (!apiConfig.flowTenant) {
+	      console.warn(`[ConfigManager] Flow config '${name}' is missing flowTenant`);
+	    }
+	  }
+	
+	  config.currentApiConfigName = name
+	  await this.writeConfig(config)
+	
+	  return apiConfig
+	})
+	} catch (error) {
+	  console.error('[ConfigManager] Error loading config:', error);
+	  throw new Error(`Failed to load config: ${error}`)
+	}
 	}
 
 	/**
@@ -236,25 +318,87 @@ export class ConfigManager {
 	}
 
 	private async readConfig(): Promise<ApiConfigData> {
-		try {
-			const content = await this.context.secrets.get(this.getConfigKey())
-
-			if (!content) {
-				return this.defaultConfig
-			}
-
-			return JSON.parse(content)
-		} catch (error) {
-			throw new Error(`Failed to read config from secrets: ${error}`)
-		}
+	try {
+	  console.log("[ConfigManager] Starting readConfig");
+	  const content = await this.context.secrets.get(this.getConfigKey())
+	
+	  if (!content) {
+	    console.log("[ConfigManager] No config found, returning default config");
+	    return this.defaultConfig
+	  }
+	
+	  console.log("[ConfigManager] Config found in secrets, length:", content.length);
+	  const parsedConfig = JSON.parse(content);
+	  
+	  // Validate and fix Flow configurations
+	  if (parsedConfig.apiConfigs) {
+	    Object.entries(parsedConfig.apiConfigs).forEach(([name, config]: [string, any]) => {
+	      if (config.apiProvider === 'flow') {
+	        console.log(`[ConfigManager] Found Flow config '${name}':`, {
+	          hasFlowTenant: 'flowTenant' in config,
+	          flowTenant: config.flowTenant,
+	          baseUrl: config.flowBaseUrl
+	        });
+	
+	        // Ensure Flow configuration is complete
+	        if (!config.flowTenant) {
+	          console.warn(`[ConfigManager] Flow config '${name}' is missing flowTenant`);
+	        }
+	      }
+	    });
+	  }
+	
+	  const configDetails = {
+	    currentConfigName: parsedConfig.currentApiConfigName,
+	    configNames: Object.keys(parsedConfig.apiConfigs || {}),
+	    hasFlowConfigs: parsedConfig.apiConfigs ?
+	      Object.values(parsedConfig.apiConfigs).some(cfg =>
+	        typeof cfg === 'object' && cfg !== null && 'flowTenant' in cfg
+	      ) : false
+	  };
+	
+	  console.log("[ConfigManager] Parsed config details:", configDetails);
+	
+	  // Validate the structure of loaded config
+	  if (!parsedConfig.apiConfigs) {
+	    console.error("[ConfigManager] Invalid config structure - missing apiConfigs");
+	    return this.defaultConfig;
+	  }
+	
+	  return parsedConfig;
+	} catch (error) {
+	  console.error("[ConfigManager] Error reading config:", error);
+	  throw new Error(`Failed to read config from secrets: ${error}`)
+	}
 	}
 
 	private async writeConfig(config: ApiConfigData): Promise<void> {
-		try {
-			const content = JSON.stringify(config, null, 2)
-			await this.context.secrets.store(this.getConfigKey(), content)
-		} catch (error) {
-			throw new Error(`Failed to write config to secrets: ${error}`)
-		}
+	try {
+	  console.log("[ConfigManager] Starting writeConfig", {
+	    currentConfigName: config.currentApiConfigName,
+	    configNames: Object.keys(config.apiConfigs),
+	    hasFlowConfig: Object.values(config.apiConfigs).some(cfg => 'flowTenant' in cfg)
+	  });
+	
+	  // Log each config's critical fields (excluding sensitive data)
+	  Object.entries(config.apiConfigs).forEach(([name, cfg]) => {
+	    console.log(`[ConfigManager] Config '${name}' details:`, {
+	      id: cfg.id,
+	      provider: cfg.apiProvider,
+	      hasFlowTenant: 'flowTenant' in cfg,
+	      flowTenant: cfg.flowTenant,
+	      hasBaseUrl: 'flowBaseUrl' in cfg
+	    });
+	  });
+	
+	  const content = JSON.stringify(config, null, 2);
+	  console.log("[ConfigManager] Serialized config length:", content.length);
+	  
+	  await this.context.secrets.store(this.getConfigKey(), content);
+	  console.log("[ConfigManager] Config written to secrets successfully");
+	} catch (error) {
+	  console.error("[ConfigManager] Error writing config:", error);
+	  throw new Error(`Failed to write config to secrets: ${error}`)
+	}
 	}
 }

@@ -38,6 +38,8 @@ import {
 	requestyDefaultModelId,
 	requestyDefaultModelInfo,
 	ApiProvider,
+	flowDefaultModelId,
+	flowModels,
 } from "../../../../src/shared/api"
 import { ExtensionMessage } from "../../../../src/shared/ExtensionMessage"
 
@@ -79,10 +81,11 @@ const ApiOptions = ({
 	const [ollamaModels, setOllamaModels] = useState<string[]>([])
 	const [lmStudioModels, setLmStudioModels] = useState<string[]>([])
 	const [vsCodeLmModels, setVsCodeLmModels] = useState<LanguageModelChatSelector[]>([])
+const [flowModels, setFlowModels] = useState<Record<string, ModelInfo>>({})
 
-	const [openRouterModels, setOpenRouterModels] = useState<Record<string, ModelInfo>>({
-		[openRouterDefaultModelId]: openRouterDefaultModelInfo,
-	})
+const [openRouterModels, setOpenRouterModels] = useState<Record<string, ModelInfo>>({
+[openRouterDefaultModelId]: openRouterDefaultModelInfo,
+})
 
 	const [glamaModels, setGlamaModels] = useState<Record<string, ModelInfo>>({
 		[glamaDefaultModelId]: glamaDefaultModelInfo,
@@ -151,6 +154,20 @@ const ApiOptions = ({
 				vscode.postMessage({ type: "requestLmStudioModels", text: apiConfiguration?.lmStudioBaseUrl })
 			} else if (selectedProvider === "vscode-lm") {
 				vscode.postMessage({ type: "requestVsCodeLmModels" })
+			} else if (
+				selectedProvider === "flow" &&
+				apiConfiguration?.flowClientId &&
+				apiConfiguration?.flowClientSecret
+			) {
+				vscode.postMessage({
+					type: "refreshFlowModels",
+					values: {
+						baseUrl: apiConfiguration?.flowBaseUrl,
+						clientId: apiConfiguration?.flowClientId,
+						clientSecret: apiConfiguration?.flowClientSecret,
+						tenant: apiConfiguration?.flowTenant,
+					},
+				})
 			}
 		},
 		250,
@@ -161,6 +178,10 @@ const ApiOptions = ({
 			apiConfiguration?.openAiApiKey,
 			apiConfiguration?.ollamaBaseUrl,
 			apiConfiguration?.lmStudioBaseUrl,
+			apiConfiguration?.flowClientId,
+			apiConfiguration?.flowClientSecret,
+			apiConfiguration?.flowBaseUrl,
+			apiConfiguration?.flowTenant,
 		],
 	)
 
@@ -179,10 +200,22 @@ const ApiOptions = ({
 			apiConfiguration.openRouterModelId in openRouterModels,
 	})
 
-	const onMessage = useCallback((event: MessageEvent) => {
-		const message: ExtensionMessage = event.data
+const onMessage = useCallback((event: MessageEvent) => {
+const message: ExtensionMessage = event.data
 
-		switch (message.type) {
+switch (message.type) {
+case "flowModels": {
+  const updatedModels = message.flowModels ?? {}
+  setFlowModels(updatedModels)
+  MODELS_BY_PROVIDER.flow = updatedModels
+  if (selectedProvider === "flow") {
+    const currentModelId = apiConfiguration?.apiModelId
+    if (currentModelId && !(currentModelId in updatedModels)) {
+      setApiConfigurationField("apiModelId", Object.keys(updatedModels)[0] || flowDefaultModelId)
+    }
+  }
+  break
+}
 			case "openRouterModels": {
 				const updatedModels = message.openRouterModels ?? {}
 				setOpenRouterModels({ [openRouterDefaultModelId]: openRouterDefaultModelInfo, ...updatedModels })
@@ -227,9 +260,9 @@ const ApiOptions = ({
 				}
 				break
 		}
-	}, [])
+}, [selectedProvider, apiConfiguration?.apiModelId, setApiConfigurationField])
 
-	useEvent("message", onMessage)
+useEvent("message", onMessage)
 
 	const selectedProviderModelOptions = useMemo(
 		() =>
@@ -1444,6 +1477,76 @@ const ApiOptions = ({
 				/>
 			)}
 
+			{selectedProvider === "flow" && (
+				<>
+					<VSCodeTextField
+						value={apiConfiguration?.flowClientId || ""}
+						type="password"
+						onInput={handleInputChange("flowClientId")}
+						placeholder="Digite o Client ID..."
+						className="w-full">
+						<span className="font-medium">Flow Client ID</span>
+					</VSCodeTextField>
+					<VSCodeTextField
+						value={apiConfiguration?.flowClientSecret || ""}
+						type="password"
+						onInput={handleInputChange("flowClientSecret")}
+						placeholder="Digite o Client Secret..."
+						className="w-full">
+						<span className="font-medium">Flow Client Secret</span>
+					</VSCodeTextField>
+					<VSCodeTextField
+						value={apiConfiguration?.flowTenant || ""}
+						onInput={handleInputChange("flowTenant")}
+						placeholder="Digite o Tenant..."
+						className="w-full">
+						<span className="font-medium">Flow Tenant</span>
+					</VSCodeTextField>
+					<VSCodeTextField
+						value={apiConfiguration?.flowBaseUrl || ""}
+						type="url"
+						onInput={handleInputChange("flowBaseUrl")}
+						placeholder="Padrão: https://flow.ciandt.com"
+						className="w-full">
+						<span className="font-medium">Flow Base URL (Opcional)</span>
+					</VSCodeTextField>
+					{apiConfiguration?.flowClientId && apiConfiguration?.flowClientSecret ? (
+						<>
+{Object.keys(flowModels).length > 0 ? (
+<ModelPicker
+apiConfiguration={apiConfiguration}
+setApiConfigurationField={setApiConfigurationField}
+defaultModelId={flowDefaultModelId}
+defaultModelInfo={flowModels[flowDefaultModelId]}
+models={flowModels}
+									modelIdKey="apiModelId"
+									modelInfoKey="openAiCustomModelInfo"
+									serviceName="Flow"
+									serviceUrl="https://flow.ciandt.com"
+								/>
+							) : (
+								<div className="text-sm text-vscode-warningForeground">
+									Carregando modelos disponíveis...
+								</div>
+							)}
+						</>
+					) : (
+						<div className="text-sm text-vscode-descriptionForeground">
+							Para selecionar um modelo, insira suas credenciais Flow primeiro.
+						</div>
+					)}
+					<div className="text-sm text-vscode-descriptionForeground -mt-2">
+						Essas credenciais são armazenadas localmente e usadas apenas para fazer requisições de API desta
+						extensão.
+					</div>
+					{!apiConfiguration?.flowClientId && (
+						<VSCodeButtonLink href="https://flow.ciandt.com/settings/api-keys" appearance="secondary">
+							Obter Credenciais do Flow
+						</VSCodeButtonLink>
+					)}
+				</>
+			)}
+
 			{selectedProviderModelOptions.length > 0 && (
 				<>
 					<div>
@@ -1655,6 +1758,8 @@ export function normalizeApiConfiguration(apiConfiguration?: ApiConfiguration) {
 					supportsImages: false, // VSCode LM API currently doesn't support images.
 				},
 			}
+		case "flow":
+			return getProviderData(flowModels, flowDefaultModelId)
 		default:
 			return getProviderData(anthropicModels, anthropicDefaultModelId)
 	}

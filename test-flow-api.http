@@ -1,0 +1,108 @@
+### Configurações Globais
+@baseUrl = https://flow.ciandt.com
+@flowTenant = cit
+@clientId = 0730f539-b08b-419b-a2f4-b07becad0c9a
+clientSecret = REDACTED
+@appToAccess = llm-api
+
+### 1. Gerar token de autenticação
+# @name auth
+POST {{baseUrl}}/auth-engine-api/v1/api-key/token
+Content-Type: application/json
+Accept: application/json
+flowTenant: {{flowTenant}}
+
+{
+    "clientId": "{{clientId}}",
+    "clientSecret": "REDACTED",
+    "appToAccess": "{{appToAccess}}"
+}
+
+### Definir token para as próximas requisições
+@token = {{auth.response.body.access_token}}
+
+### 2. Listar modelos disponíveis
+GET {{baseUrl}}/ai-orchestration-api/v1/models
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{token}}
+flowTenant: {{flowTenant}}
+
+### 3. Listar modelos Azure OpenAI
+GET {{baseUrl}}/ai-orchestration-api/v1/models/azure-openai?capabilities=system-instruction,chat-conversation
+accept: application/json
+FlowTenant: {{flowTenant}}
+Authorization: Bearer {{token}}
+
+### 4. Listar modelos Amazon Bedrock
+GET {{baseUrl}}/ai-orchestration-api/v1/models/amazon-bedrock?capabilities=system-instruction,chat-conversation
+accept: application/json
+FlowTenant: {{flowTenant}}
+Authorization: Bearer {{token}}
+
+### 5. Chat Completions OpenAI
+POST {{baseUrl}}/ai-orchestration-api/v1/openai/chat/completions
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{token}}
+flowAgent: chat
+flowTenant: {{flowTenant}}
+
+{
+    "stream": false,
+    "messages": [
+        {
+            "role": "user",
+            "content": "Que dia nasceu Cristovão colombo?"
+        }
+    ],
+    "max_tokens": 4096,
+    "model": "gpt-4o-mini"
+}
+
+### 6. Chat Completions GEMINI
+POST {{baseUrl}}/ai-orchestration-api/v1/google/generateContent
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{token}}
+flowAgent: chat
+flowTenant: {{flowTenant}}
+
+{
+    "contents": [
+        {
+            "role": "user",
+            "parts": [{
+                "text": "Crie uma classe que soma 2 números em C#"
+            }]
+        }
+    ],
+    "model": "gemini-1.5-flash"
+}
+
+### 7. Chat Completions CLAUDE
+POST {{baseUrl}}/ai-orchestration-api/v1/bedrock/invoke
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{token}}
+flowAgent: chat
+flowTenant: {{flowTenant}}
+
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "What is the capital city of Brazil?"
+        }
+      ]
+    }
+  ],
+  "anthropic_version": "bedrock-2023-05-31",
+  "max_tokens": 131072,
+  "allowedModels": [
+    "anthropic.claude-37-sonnet"
+  ]
+}

@@ -960,6 +960,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 						break
 					case "apiConfiguration":
 						if (message.apiConfiguration) {
+							console.log("Received apiConfiguration update:", JSON.stringify(message.apiConfiguration, null, 2))
 							await this.updateApiConfiguration(message.apiConfiguration)
 						}
 						await this.postStateToWebview()
@@ -2142,11 +2143,13 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 				await this.configManager.setModeConfig(mode, config.id)
 			}
 		}
+		console.log("Updating API Configuration:", JSON.stringify(apiConfiguration, null, 2))
 		await this.contextProxy.setApiConfiguration(apiConfiguration)
 
 		if (this.getCurrentCline()) {
 			this.getCurrentCline()!.api = buildApiHandler(apiConfiguration)
 		}
+		console.log("API Configuration updated successfully")
 	}
 
 	async cancelTask() {
@@ -2336,23 +2339,41 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 	// Save configuration
 
 	async upsertApiConfiguration(configName: string, apiConfiguration: ApiConfiguration) {
-		try {
-			await this.configManager.saveConfig(configName, apiConfiguration)
-			const listApiConfig = await this.configManager.listConfig()
-
-			await Promise.all([
-				this.updateGlobalState("listApiConfigMeta", listApiConfig),
-				this.updateApiConfiguration(apiConfiguration),
-				this.updateGlobalState("currentApiConfigName", configName),
-			])
-
-			await this.postStateToWebview()
-		} catch (error) {
-			this.outputChannel.appendLine(
-				`Error create new api configuration: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,
-			)
-			vscode.window.showErrorMessage(t("common:errors.create_api_config"))
-		}
+	try {
+	  console.log("[ClineProvider] Starting upsertApiConfiguration", {
+	    configName,
+	    apiConfiguration: {
+	      ...apiConfiguration,
+	      flowClientSecret: apiConfiguration.flowClientSecret ? '[REDACTED]' : undefined,
+	      flowClientId: apiConfiguration.flowClientId ? '[REDACTED]' : undefined
+	    }
+	  });
+	
+	  console.log("[ClineProvider] Saving config...");
+	  await this.configManager.saveConfig(configName, apiConfiguration);
+	  
+	  console.log("[ClineProvider] Getting list of configs...");
+	  const listApiConfig = await this.configManager.listConfig();
+	
+	  console.log("[ClineProvider] Updating global state...");
+	  await Promise.all([
+	    this.updateGlobalState("listApiConfigMeta", listApiConfig),
+	    this.updateApiConfiguration(apiConfiguration),
+	    this.updateGlobalState("currentApiConfigName", configName),
+	  ]);
+	
+	  console.log("[ClineProvider] Posting state to webview...");
+	  await this.postStateToWebview();
+	  
+	  console.log("[ClineProvider] Configuration updated successfully");
+	} catch (error) {
+	  console.error("[ClineProvider] Error in upsertApiConfiguration:", error);
+	  this.outputChannel.appendLine(
+	    `Error create new api configuration: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,
+	  );
+	  vscode.window.showErrorMessage(t("common:errors.create_api_config"));
+	  throw error; // Re-throwing to help with debugging
+	}
 	}
 
 	// Task history

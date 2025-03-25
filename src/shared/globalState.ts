@@ -1,6 +1,6 @@
-import type { SecretKey, GlobalStateKey, ConfigurationKey, ConfigurationValues } from "../exports/roo-code"
+import type { SecretKey, ConfigurationKey, ConfigurationValues } from "../exports/roo-code"
 
-export type { SecretKey, GlobalStateKey, ConfigurationKey, ConfigurationValues }
+export type { SecretKey, ConfigurationKey, ConfigurationValues }
 
 /**
  * For convenience we'd like the `RooCodeAPI` to define `SecretKey` and `GlobalStateKey`,
@@ -26,6 +26,8 @@ export const SECRET_KEYS = [
 	"mistralApiKey",
 	"unboundApiKey",
 	"requestyApiKey",
+	"flowClientId",
+	"flowClientSecret",
 ] as const
 
 type CheckSecretKeysExhaustiveness = Exclude<SecretKey, (typeof SECRET_KEYS)[number]> extends never ? true : false
@@ -125,7 +127,19 @@ export const GLOBAL_STATE_KEYS = [
 	"maxWorkspaceFiles",
 	"maxReadFileLine",
 	"fakeAi",
+	"flowModelId",
+	"flowBaseUrl",
+	"flowClientId",
+	"flowClientSecret",
+	"flowTenant",
+	"flowModelType",
+	"flowAppToAccess",
+	"flowAuthBaseUrl",
+	"flowAiOrchestrationBaseUrl",
+	"flowAgent",
 ] as const
+
+export type GlobalStateKey = (typeof GLOBAL_STATE_KEYS)[number]
 
 export const PASS_THROUGH_STATE_KEYS = ["taskHistory"] as const
 

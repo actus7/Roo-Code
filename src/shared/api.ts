@@ -18,6 +18,8 @@ export type ApiProvider =
 	| "requesty"
 	| "human-relay"
 	| "fake-ai"
+	| "flow"
+	| "purecode"
 
 export interface ApiHandlerOptions {
 	apiModelId?: string
@@ -79,6 +81,15 @@ export interface ApiHandlerOptions {
 	modelMaxTokens?: number
 	modelMaxThinkingTokens?: number
 	fakeAi?: unknown
+	// Flow-specific options
+	flowBaseUrl?: string
+	flowAuthBaseUrl?: string
+	flowTenant?: string
+	flowClientId?: string
+	flowClientSecret?: string
+	flowAppToAccess?: string
+	flowAgent?: string
+	flowRequestTimeout?: number
 }
 
 export type ApiConfiguration = ApiHandlerOptions & {
@@ -89,19 +100,30 @@ export type ApiConfiguration = ApiHandlerOptions & {
 // Import GlobalStateKey type from globalState.ts
 import { GlobalStateKey } from "./globalState"
 
+export interface ApiHandler {
+	createMessage(systemPrompt: string, messages: any[]): AsyncIterable<any>
+	getModel(): { id: string; info: ModelInfo }
+	countTokens(content: any[]): Promise<number>
+}
+
 // Define API configuration keys for dynamic object building.
 // TODO: This needs actual type safety; a type error should be thrown if
 // this is not an exhaustive list of all `GlobalStateKey` values.
 export const API_CONFIG_KEYS: GlobalStateKey[] = [
-	"apiModelId",
-	"anthropicBaseUrl",
-	"vsCodeLmModelSelector",
-	"glamaModelId",
-	"glamaModelInfo",
-	"openRouterModelId",
-	"openRouterModelInfo",
-	"openRouterBaseUrl",
-	"openRouterSpecificProvider",
+"apiModelId",
+"anthropicBaseUrl",
+"vsCodeLmModelSelector",
+"glamaModelId",
+"glamaModelInfo",
+"openRouterModelId",
+"openRouterModelInfo",
+"openRouterBaseUrl",
+"openRouterSpecificProvider",
+"flowTenant",
+"flowBaseUrl",
+"flowAuthBaseUrl",
+"flowAppToAccess",
+"flowAgent",
 	"awsRegion",
 	"awsUseCrossRegionInference",
 	// "awsUsePromptCache", // NOT exist on GlobalStateKey
@@ -1028,4 +1050,108 @@ export const unboundDefaultModelInfo: ModelInfo = {
 	outputPrice: 15.0,
 	cacheWritesPrice: 3.75,
 	cacheReadsPrice: 0.3,
+}
+
+export const flowDefaultModelId = "gpt-4o"
+export const flowModels: Record<string, ModelInfo> = {
+	"gpt-4o": {
+		maxTokens: 8192,
+		contextWindow: 128000,
+		supportsImages: true,
+		supportsComputerUse: true,
+		supportsPromptCache: false,
+		inputPrice: 2.5,
+		outputPrice: 10.0,
+		description: "CI&T Flow GPT-4 Optimized Model - Recomendado para tarefas complexas",
+	},
+	"gpt-4o-mini": {
+		maxTokens: 4096,
+		contextWindow: 128000,
+		supportsImages: true,
+		supportsComputerUse: true,
+		supportsPromptCache: false,
+		inputPrice: 0.15,
+		outputPrice: 0.6,
+		description: "CI&T Flow GPT-4 Optimized Mini Model",
+	},
+	"o3-mini": {
+		maxTokens: 100000,
+		contextWindow: 200000,
+		supportsImages: false,
+		supportsComputerUse: true,
+		supportsPromptCache: false,
+		inputPrice: 1.1,
+		outputPrice: 4.4,
+		description: "CI&T Flow O3 Mini Model",
+	},
+	"meta.llama3-70b-instruct": {
+		maxTokens: 8192,
+		contextWindow: 200000,
+		supportsImages: true,
+		supportsComputerUse: false,
+		supportsPromptCache: false,
+		inputPrice: 0.72,
+		outputPrice: 0.72,
+		description: "Meta Llama 3 70B Instruct Model",
+	},
+	"anthropic.claude-3-sonnet": {
+		maxTokens: 4096,
+		contextWindow: 200000,
+		supportsImages: true,
+		supportsComputerUse: true,
+		supportsPromptCache: false,
+		inputPrice: 3.0,
+		outputPrice: 15.0,
+		description: "Anthropic Claude 3 Sonnet Model",
+	},
+	"anthropic.claude-35-sonnet": {
+		maxTokens: 8192,
+		contextWindow: 200000,
+		supportsImages: true,
+		supportsComputerUse: true,
+		supportsPromptCache: false,
+		inputPrice: 3.0,
+		outputPrice: 15.0,
+		description: "Anthropic Claude 3.5 Sonnet Model",
+	},
+	"anthropic.claude-37-sonnet": {
+		maxTokens: 8192,
+		contextWindow: 200000,
+		supportsImages: true,
+		supportsComputerUse: true,
+		supportsPromptCache: false,
+		inputPrice: 3.0,
+		outputPrice: 15.0,
+		description: "Anthropic Claude 3.7 Sonnet Model",
+	},
+	"amazon.nova-lite": {
+		maxTokens: 5000,
+		contextWindow: 300000,
+		supportsImages: true,
+		supportsComputerUse: false,
+		supportsPromptCache: false,
+		inputPrice: 0.06,
+		outputPrice: 0.24,
+		description: "Amazon Nova Lite Model",
+	},
+	"amazon.nova-micro": {
+		maxTokens: 5000,
+		contextWindow: 128000,
+		supportsImages: false,
+		supportsComputerUse: false,
+		supportsPromptCache: false,
+		inputPrice: 0.035,
+		outputPrice: 0.14,
+		description: "Amazon Nova Micro Model",
+	},
+	"amazon.nova-pro": {
+		maxTokens: 5000,
+		contextWindow: 300000,
+		supportsImages: true,
+		supportsComputerUse: false,
+		supportsPromptCache: false,
+		inputPrice: 0.8,
+		outputPrice: 3.2,
+		description: "Amazon Nova Pro Model",
+	}
 }

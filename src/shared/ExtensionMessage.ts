@@ -20,52 +20,56 @@ export interface LanguageModelChatSelector {
 // ExtensionMessage and has 'type' enum which can be 'plusButtonClicked' or
 // 'settingsButtonClicked' or 'hello'. Webview will hold state.
 export interface ExtensionMessage {
-	type:
-		| "action"
-		| "state"
-		| "selectedImages"
-		| "ollamaModels"
-		| "lmStudioModels"
-		| "theme"
-		| "workspaceUpdated"
-		| "invoke"
-		| "partialMessage"
-		| "openRouterModels"
-		| "glamaModels"
-		| "unboundModels"
-		| "requestyModels"
-		| "openAiModels"
-		| "mcpServers"
-		| "enhancedPrompt"
-		| "commitSearchResults"
-		| "listApiConfig"
-		| "vsCodeLmModels"
-		| "vsCodeLmApiAvailable"
-		| "requestVsCodeLmModels"
-		| "updatePrompt"
-		| "systemPrompt"
-		| "autoApprovalEnabled"
-		| "updateCustomMode"
-		| "deleteCustomMode"
-		| "currentCheckpointUpdated"
-		| "showHumanRelayDialog"
-		| "humanRelayResponse"
-		| "humanRelayCancel"
-		| "browserToolEnabled"
-		| "browserConnectionResult"
-		| "remoteBrowserEnabled"
-		| "ttsStart"
-		| "ttsStop"
-		| "maxReadFileLine"
-		| "fileSearchResults"
-	text?: string
-	action?:
-		| "chatButtonClicked"
-		| "mcpButtonClicked"
-		| "settingsButtonClicked"
-		| "historyButtonClicked"
-		| "promptsButtonClicked"
-		| "didBecomeVisible"
+type:
+| "action"
+| "state"
+| "selectedImages"
+| "ollamaModels"
+| "lmStudioModels"
+| "theme"
+| "workspaceUpdated"
+| "invoke"
+| "partialMessage"
+| "openRouterModels"
+| "glamaModels"
+| "unboundModels"
+| "requestyModels"
+| "openAiModels"
+| "mcpServers"
+| "enhancedPrompt"
+| "commitSearchResults"
+| "listApiConfig"
+| "vsCodeLmModels"
+| "vsCodeLmApiAvailable"
+| "requestVsCodeLmModels"
+| "updatePrompt"
+| "systemPrompt"
+| "autoApprovalEnabled"
+| "updateCustomMode"
+| "deleteCustomMode"
+| "currentCheckpointUpdated"
+| "showHumanRelayDialog"
+| "humanRelayResponse"
+| "humanRelayCancel"
+| "browserToolEnabled"
+| "browserConnectionResult"
+| "remoteBrowserEnabled"
+| "ttsStart"
+| "ttsStop"
+| "maxReadFileLine"
+| "fileSearchResults"
+| "flowModels"
+| "getFlowModels"
+| "refreshFlowModels"
+text?: string
+action?:
+| "chatButtonClicked"
+| "mcpButtonClicked"
+| "settingsButtonClicked"
+| "historyButtonClicked"
+| "promptsButtonClicked"
+| "didBecomeVisible"
+| "getFlowModels"
 	invoke?: "newChat" | "sendMessage" | "primaryButtonClick" | "secondaryButtonClick" | "setChatBoxMessage"
 	state?: ExtensionState
 	images?: string[]
@@ -78,12 +82,13 @@ export interface ExtensionMessage {
 		isActive: boolean
 		path?: string
 	}>
-	partialMessage?: ClineMessage
-	openRouterModels?: Record<string, ModelInfo>
-	glamaModels?: Record<string, ModelInfo>
-	unboundModels?: Record<string, ModelInfo>
-	requestyModels?: Record<string, ModelInfo>
-	openAiModels?: string[]
+partialMessage?: ClineMessage
+openRouterModels?: Record<string, ModelInfo>
+glamaModels?: Record<string, ModelInfo>
+unboundModels?: Record<string, ModelInfo>
+requestyModels?: Record<string, ModelInfo>
+flowModels?: Record<string, ModelInfo>
+openAiModels?: string[]
 	mcpServers?: McpServer[]
 	commits?: GitCommit[]
 	listApiConfig?: ApiConfigMeta[]
