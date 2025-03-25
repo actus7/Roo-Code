@@ -54,13 +54,6 @@ export class FlowHandler extends BaseProvider implements ApiHandler {
 	constructor(options: ApiHandlerOptions) {
 		super()
 		this.options = options
-		console.log("[FlowHandler] Initializing with options:", {
-			baseUrl: options.flowBaseUrl,
-			authBaseUrl: options.flowAuthBaseUrl,
-			tenant: options.flowTenant,
-			appToAccess: options.flowAppToAccess,
-			agent: options.flowAgent,
-		})
 		this.validateOptions()
 		this.axiosInstance = axios.create({
 			baseURL: options.flowBaseUrl || DEFAULT_BASE_URL,
@@ -69,10 +62,6 @@ export class FlowHandler extends BaseProvider implements ApiHandler {
 				Accept: "application/json",
 				flowTenant: options.flowTenant,
 			},
-		})
-		console.log("[FlowHandler] Created axios instance with headers:", {
-			flowTenant: options.flowTenant,
-			baseURL: options.flowBaseUrl || DEFAULT_BASE_URL,
 		})
 		this.setupAuthInterceptor()
 
@@ -108,14 +97,6 @@ export class FlowHandler extends BaseProvider implements ApiHandler {
 			"flowClientSecret",
 			"flowAppToAccess",
 		] as const
-		console.log("[FlowHandler] Validating options:", {
-			hasBaseUrl: "flowBaseUrl" in this.options,
-			hasTenant: "flowTenant" in this.options,
-			hasClientId: "flowClientId" in this.options,
-			hasClientSecret: "flowClientSecret" in this.options,
-			hasAppToAccess: "flowAppToAccess" in this.options,
-			tenant: this.options.flowTenant,
-		})
 
 		for (const option of requiredOptions) {
 			if (!(option in this.options)) {
@@ -133,12 +114,6 @@ export class FlowHandler extends BaseProvider implements ApiHandler {
 	private setupAuthInterceptor() {
 		this.axiosInstance.interceptors.request.use(
 			async (config) => {
-				console.log("[FlowHandler] Intercepting request", {
-					url: config.url,
-					tenant: this.options.flowTenant,
-					currentHeaders: config.headers,
-				})
-
 				const token = await this.authenticate()
 				config.headers.Authorization = `Bearer ${token}`
 				config.headers.flowTenant = this.options.flowTenant
@@ -203,7 +178,6 @@ export class FlowHandler extends BaseProvider implements ApiHandler {
 			this.token = response.data.access_token
 			// Define expiração para 55 minutos (5 minutos antes do token expirar)
 			this.tokenExpirationTime = Date.now() + 55 * 60 * 1000
-			console.log("[Flow] Successfully authenticated")
 
 			return this.ensureValidToken(this.token)
 		} catch (error) {
