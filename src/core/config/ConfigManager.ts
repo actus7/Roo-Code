@@ -121,7 +121,8 @@ export class ConfigManager {
 	  console.log("[ConfigManager] Starting saveConfig", {
 	    name,
 	    configKeys: Object.keys(config),
-	    hasFlowTenant: 'flowTenant' in config
+	    hasFlowTenant: 'flowTenant' in config,
+	    apiProvider: config.apiProvider
 	  });
 	
 	  const currentConfig = await this.readConfig();
@@ -130,11 +131,18 @@ export class ConfigManager {
 	  });
 	
 	  const existingConfig = currentConfig.apiConfigs[name];
-	  console.log("[ConfigManager] Existing config found:", !!existingConfig);
+	  console.log("[ConfigManager] Existing config found:", !!existingConfig, {
+	    existingProvider: existingConfig?.apiProvider,
+	    existingFlowTenant: existingConfig?.flowTenant
+	  });
 	
 	  // Validate Flow configuration before saving
 	  if (config.apiProvider === 'flow') {
-	    console.log("[ConfigManager] Validating Flow configuration");
+	    console.log("[ConfigManager] Validating Flow configuration", {
+	      flowTenant: config.flowTenant,
+	      flowBaseUrl: config.flowBaseUrl,
+	      flowAuthBaseUrl: config.flowAuthBaseUrl
+	    });
 	    if (!config.flowTenant) {
 	      console.error("[ConfigManager] Missing required Flow Tenant");
 	      throw new Error("Flow Tenant is required for Flow provider configuration");
@@ -155,12 +163,14 @@ export class ConfigManager {
 	    configName: name,
 	    hasFlowTenant: 'flowTenant' in currentConfig.apiConfigs[name],
 	    flowTenant: currentConfig.apiConfigs[name].flowTenant,
-	    id: currentConfig.apiConfigs[name].id
+	    id: currentConfig.apiConfigs[name].id,
+	    apiProvider: currentConfig.apiConfigs[name].apiProvider
 	  });
 	
 	  console.log("[ConfigManager] New config prepared", {
 	    id: currentConfig.apiConfigs[name].id,
-	    hasFlowTenant: 'flowTenant' in currentConfig.apiConfigs[name]
+	    hasFlowTenant: 'flowTenant' in currentConfig.apiConfigs[name],
+	    apiProvider: currentConfig.apiConfigs[name].apiProvider
 	  });
 	
 	  await this.writeConfig(currentConfig);
@@ -387,15 +397,26 @@ export class ConfigManager {
 	      provider: cfg.apiProvider,
 	      hasFlowTenant: 'flowTenant' in cfg,
 	      flowTenant: cfg.flowTenant,
-	      hasBaseUrl: 'flowBaseUrl' in cfg
+	      hasBaseUrl: 'flowBaseUrl' in cfg,
+	      hasAuthBaseUrl: 'flowAuthBaseUrl' in cfg
 	    });
 	  });
 	
 	  const content = JSON.stringify(config, null, 2);
 	  console.log("[ConfigManager] Serialized config length:", content.length);
 	  
+	  console.log("[ConfigManager] Attempting to store config in secrets");
 	  await this.context.secrets.store(this.getConfigKey(), content);
 	  console.log("[ConfigManager] Config written to secrets successfully");
+	
+	  // Verify the stored config
+	  const storedContent = await this.context.secrets.get(this.getConfigKey());
+	  if (storedContent === content) {
+	    console.log("[ConfigManager] Stored config verified successfully");
+	  } else {
+	    console.error("[ConfigManager] Stored config verification failed");
+	    throw new Error("Config verification failed after storage");
+	  }
 	} catch (error) {
 	  console.error("[ConfigManager] Error writing config:", error);
 	  throw new Error(`Failed to write config to secrets: ${error}`)
