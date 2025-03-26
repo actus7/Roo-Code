@@ -11,6 +11,7 @@ export interface TokenUsage {
 
 export interface RooCodeEvents {
 	message: [{ taskId: string; action: "created" | "updated"; message: ClineMessage }]
+	taskCreated: [taskId: string]
 	taskStarted: [taskId: string]
 	taskPaused: [taskId: string]
 	taskUnpaused: [taskId: string]
@@ -183,7 +184,9 @@ export type GlobalStateKey =
 	| "lastShownAnnouncementId"
 	| "customInstructions"
 	| "alwaysAllowReadOnly"
+	| "alwaysAllowReadOnlyOutsideWorkspace"
 	| "alwaysAllowWrite"
+	| "alwaysAllowWriteOutsideWorkspace"
 	| "alwaysAllowExecute"
 	| "alwaysAllowBrowser"
 	| "alwaysAllowMcp"
@@ -239,7 +242,6 @@ export type GlobalStateKey =
 	| "enhancementApiConfigId"
 	| "experiments" // Map of experiment IDs to their enabled state
 	| "autoApprovalEnabled"
-	| "enableCustomModeCreation" // Enable the ability for Roo to create custom modes
 	| "customModes" // Array of custom modes
 	| "unboundModelId"
 	| "requestyModelId"
