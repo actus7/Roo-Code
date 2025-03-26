@@ -1,6 +1,11 @@
 import { AxiosRequestHeaders, RawAxiosRequestHeaders, AxiosHeaderValue } from "axios"
 import { FlowHeaders } from "./types"
 
+/**
+ * Converts an Axios header value to a string or undefined.
+ * @param value - The header value to convert
+ * @returns The string value or undefined if the input is null/undefined
+ */
 function ensureHeaderValue(value: AxiosHeaderValue | undefined): string | undefined {
   if (value === null || value === undefined) {
     return undefined
@@ -8,6 +13,11 @@ function ensureHeaderValue(value: AxiosHeaderValue | undefined): string | undefi
   return String(value)
 }
 
+/**
+ * Creates Axios headers from Flow-specific headers, setting default values for required fields.
+ * @param headers - Flow-specific headers
+ * @returns Processed Axios request headers with undefined values filtered out
+ */
 export function createAxiosHeaders(headers: FlowHeaders): RawAxiosRequestHeaders {
   // Criar um objeto temporário com os valores convertidos
   const processedHeaders: Record<string, string | undefined> = {
@@ -27,6 +37,11 @@ export function createAxiosHeaders(headers: FlowHeaders): RawAxiosRequestHeaders
   }, {} as RawAxiosRequestHeaders)
 }
 
+/**
+ * Ensures required headers are present in Axios request headers.
+ * @param headers - Raw Axios request headers
+ * @returns Axios request headers with guaranteed Content-Type and Accept headers
+ */
 export function ensureAxiosHeaders(headers: RawAxiosRequestHeaders): AxiosRequestHeaders {
   const ensuredHeaders = { ...headers } as AxiosRequestHeaders
   
@@ -41,6 +56,12 @@ export function ensureAxiosHeaders(headers: RawAxiosRequestHeaders): AxiosReques
   return ensuredHeaders
 }
 
+/**
+ * Merges base Axios headers with override Flow headers.
+ * @param base - Base Axios request headers
+ * @param override - Flow headers to override the base headers
+ * @returns Merged and processed Axios request headers
+ */
 export function mergeAxiosHeaders(
   base: RawAxiosRequestHeaders,
   override: Partial<FlowHeaders>

@@ -1,8 +1,10 @@
 import { AxiosHeaderValue } from "axios"
 import { ApiHandlerOptions } from "../../../shared/api"
 
+/** Type helper for nullable values */
 export type Nullable<T> = T | null | undefined
 
+/** HTTP headers specific to Flow API requests */
 export interface FlowHeaders {
   "Content-Type"?: AxiosHeaderValue
   Accept?: AxiosHeaderValue
@@ -12,6 +14,7 @@ export interface FlowHeaders {
   [key: string]: AxiosHeaderValue | undefined
 }
 
+/** Represents a language model in the Flow API */
 export interface FlowModel {
   id: string
   maxTokens?: number
@@ -21,6 +24,7 @@ export interface FlowModel {
   description?: string
 }
 
+/** Structure of messages sent to Flow API */
 export interface FlowMessage {
   role: string
   content: Array<{
@@ -29,6 +33,7 @@ export interface FlowMessage {
   }>
 }
 
+/** Response structure from Flow API model endpoints */
 export interface FlowModelResponse {
   choices?: Array<{
     delta?: {
@@ -52,12 +57,14 @@ export interface FlowModelResponse {
   }
 }
 
+/** Configuration for Flow API requests */
 export interface FlowRequestConfig {
   headers: FlowHeaders
   responseType: "stream" | "json"
   timeout?: number
 }
 
+/** Optional configuration parameters for Flow API handler */
 export interface FlowOptions extends Partial<ApiHandlerOptions> {
   flowBaseUrl?: string
   flowAppToAccess?: string
@@ -71,24 +78,33 @@ export interface FlowOptions extends Partial<ApiHandlerOptions> {
   modelTemperature?: Nullable<number>
 }
 
+/** Options for constructing API request payload */
 export interface PayloadOptions {
   stream?: boolean
   max_tokens?: number
   temperature?: Nullable<number>
 }
 
+/** Combined type for Flow handler options */
 export type FlowHandlerOptions = ApiHandlerOptions & Partial<FlowOptions>
 
+/** Response structure from Flow authentication endpoint */
 export interface FlowAuthResponse {
   access_token: string
 }
 
+/** Default configuration values for Flow API */
 export const DEFAULT_FLOW_CONFIG = {
   flowAppToAccess: "llm-api",
   flowAgent: "chat",
   modelTemperature: 0.7,
 } as const
 
+/**
+ * Ensures a valid temperature value is returned
+ * @param temp - Temperature value to validate
+ * @returns Valid temperature value or default
+ */
 export function ensureTemperature(temp: Nullable<number>): number {
   if (temp === null || temp === undefined) {
     return DEFAULT_FLOW_CONFIG.modelTemperature
@@ -96,6 +112,7 @@ export function ensureTemperature(temp: Nullable<number>): number {
   return temp
 }
 
+/** Default headers for Flow API requests */
 export const DEFAULT_HEADERS: FlowHeaders = {
   "Content-Type": "application/json",
   Accept: "application/json",

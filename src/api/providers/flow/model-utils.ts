@@ -1,3 +1,6 @@
+/**
+ * API endpoints for different model providers
+ */
 export const ENDPOINTS = {
   OPENAI: "/openai/chat/completions",
   GOOGLE: "/google/generateContent",
@@ -5,8 +8,17 @@ export const ENDPOINTS = {
   ANTHROPIC: "/anthropic/messages",
 } as const;
 
+/**
+ * Supported model providers
+ */
 export type ModelProvider = "openai" | "google" | "bedrock" | "anthropic";
 
+/**
+ * Determines the appropriate API endpoint based on the model ID prefix
+ * @param modelId - The model identifier (e.g., "gpt-4", "claude-2")
+ * @returns The corresponding API endpoint path
+ * @throws Error if modelId is not provided
+ */
 export function getEndpointForModel(modelId: string): string {
   if (!modelId) {
     throw new Error("Model ID is required");
@@ -27,6 +39,11 @@ export function getEndpointForModel(modelId: string): string {
   return ENDPOINTS.OPENAI;
 }
 
+/**
+ * Extracts the provider type from a model ID
+ * @param modelId - The model identifier
+ * @returns The corresponding model provider, defaults to "openai" if unrecognized
+ */
 export function getProviderFromModelId(modelId: string): ModelProvider {
   if (modelId.startsWith("gpt-")) {
     return "openai";
@@ -41,6 +58,11 @@ export function getProviderFromModelId(modelId: string): ModelProvider {
   return "openai"; // Default
 }
 
+/**
+ * Checks if a given model ID matches any of the supported model patterns
+ * @param modelId - The model identifier to check
+ * @returns True if the model ID matches a supported pattern, false otherwise
+ */
 export function isModelSupported(modelId: string): boolean {
   return (
     modelId.startsWith("gpt-") ||

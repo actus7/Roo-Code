@@ -1,5 +1,5 @@
 import { ModelInfo } from "../../../shared/api"
-import { FlowMessage, FlowModelResponse, PayloadOptions, DEFAULT_FLOW_CONFIG, ensureTemperature } from "./types"
+import { FlowMessage, FlowModelResponse, PayloadOptions, ensureTemperature } from "./types"
 
 /**
  * Generates the request payload based on the model type and messages
@@ -34,7 +34,7 @@ export function generatePayload(
     }
   }
 
-  // Claude models (Anthropic format)
+  // Claude models (Anthropic format) 
   if (modelId.startsWith("anthropic.claude-")) {
     return {
       ...basePayload,
@@ -81,6 +81,9 @@ export function generatePayload(
 
 /**
  * Extracts text content from model responses based on model type
+ * @param response - The response object from the model
+ * @param modelId - Identifier of the model that generated the response
+ * @returns The extracted text content or undefined if not found
  */
 export function extractResponseContent(response: FlowModelResponse, modelId: string): string | undefined {
   if (modelId.startsWith("gpt-")) {

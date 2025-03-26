@@ -20,8 +20,9 @@ import {
 } from "./flow/types"
 
 /**
- * Handler for Flow API operations
- * Manages authentication, model selection, and message generation
+ * Handler for Flow API operations.
+ * Manages authentication, model selection, and message generation for the Flow API service.
+ * Implements token-based authentication with automatic token refresh and model management.
  */
 export class FlowHandler extends BaseProvider implements ApiHandler {
   private options: FlowHandlerOptions
@@ -42,6 +43,11 @@ export class FlowHandler extends BaseProvider implements ApiHandler {
     },
   }
 
+  /**
+   * Creates a new FlowHandler instance.
+   * @param options - Configuration options for the Flow API handler
+   * @throws Error if required credentials are missing
+   */
   constructor(options: ApiHandlerOptions) {
     super()
     this.options = {
@@ -70,6 +76,10 @@ export class FlowHandler extends BaseProvider implements ApiHandler {
     this.setupAuthInterceptor()
   }
 
+  /**
+   * Validates that all required options are present and valid.
+   * @throws Error if any required option is missing or invalid
+   */
   private validateOptions(): void {
     const requiredOptions = [
       "flowBaseUrl",
@@ -92,6 +102,10 @@ export class FlowHandler extends BaseProvider implements ApiHandler {
     console.log("[FlowHandler] Options validation successful")
   }
 
+  /**
+   * Sets up the authentication interceptor for all API requests.
+   * Automatically adds authentication headers to requests.
+   */
   private setupAuthInterceptor(): void {
     this.axiosInstance.interceptors.request.use(
       async (config: InternalAxiosRequestConfig) => {
@@ -110,6 +124,10 @@ export class FlowHandler extends BaseProvider implements ApiHandler {
     )
   }
 
+  /**
+   * Returns the current token if it's still valid.
+   * @returns The current token if valid, undefined otherwise
+   */
   private getValidToken(): string | undefined {
     if (!this.token || !this.tokenExpirationTime || Date.now() >= this.tokenExpirationTime) {
       return undefined
@@ -117,6 +135,12 @@ export class FlowHandler extends BaseProvider implements ApiHandler {
     return this.token
   }
 
+  /**
+   * Ensures a token is valid and available.
+   * @param token - The token to validate
+   * @returns The validated token
+   * @throws Error if no valid token is available
+   */
   private ensureValidToken(token: string | undefined): string {
     if (!token) {
       throw new Error("No valid token available")
@@ -124,6 +148,12 @@ export class FlowHandler extends BaseProvider implements ApiHandler {
     return token
   }
 
+  /**
+   * Authenticates with the Flow API and manages token refresh.
+   * Implements retry logic for concurrent authentication requests.
+   * @returns A promise that resolves to a valid authentication token
+   * @throws Error if authentication fails
+   */
   private async authenticate(): Promise<string> {
     const validToken = this.getValidToken()
     if (validToken) {
@@ -187,6 +217,11 @@ export class FlowHandler extends BaseProvider implements ApiHandler {
     }
   }
 
+  /**
+   * Fetches available models from the Flow API.
+   * @returns A promise that resolves to a record of available models and their information
+   * @throws Error if authentication fails or no models are available
+   */
   public async getAvailableModels(): Promise<Record<string, ModelInfo>> {
     try {
       await this.authenticate()
@@ -224,6 +259,11 @@ export class FlowHandler extends BaseProvider implements ApiHandler {
     return this.availableModels
   }
 
+  /**
+   * Fetches models for a specific provider.
+   * @param provider - The provider to fetch models from
+   * @returns A promise that resolves to a record of provider-specific models
+   */
   private async getProviderModels(provider: string): Promise<Record<string, ModelInfo>> {
     try {
       const token = await this.authenticate()
@@ -251,6 +291,10 @@ export class FlowHandler extends BaseProvider implements ApiHandler {
     }
   }
 
+  /**
+   * Gets the current model configuration.
+   * @returns The current model ID and its information
+   */
   override getModel(): { id: string; info: ModelInfo } {
     const availableModelIds = Object.keys(this.availableModels)
     if (availableModelIds.length === 0) {
@@ -269,6 +313,11 @@ export class FlowHandler extends BaseProvider implements ApiHandler {
     return { id: modelId, info: modelInfo }
   }
 
+  /**
+   * Gets the default model ID based on available models.
+   * Prioritizes models in the order: GPT > Claude > Gemini.
+   * @returns The selected default model ID
+   */
   private getDefaultModelId(): string {
     const availableModelIds = Object.keys(this.availableModels)
 
@@ -284,6 +333,12 @@ export class FlowHandler extends BaseProvider implements ApiHandler {
     return availableModelIds[0]
   }
 
+  /**
+   * Creates a message stream using the Flow API.
+   * @param systemPrompt - The system prompt to use
+   * @param messages - The conversation messages
+   * @returns An async generator yielding message chunks and usage information
+   */
   override async *createMessage(systemPrompt: string, messages: Anthropic.Messages.MessageParam[]): ApiStream {
     const startTime = Date.now()
     let finalModelId = "unknown"
@@ -335,6 +390,10 @@ export class FlowHandler extends BaseProvider implements ApiHandler {
     }
   }
   
+  /**
+   * Prepares the model for a request by ensuring models are initialized.
+   * @returns A promise that resolves to the selected model ID and info
+   */
   private async prepareModelForRequest(): Promise<{ id: string; info: ModelInfo }> {
     if (!this.hasInitializedModels) {
       try {
@@ -347,6 +406,9 @@ export class FlowHandler extends BaseProvider implements ApiHandler {
     return this.getModel()
   }
 
+  /**
+   * Initializes the available models.
+   */
   private async initializeModels(): Promise<void> {
     try {
       await this.getAvailableModels()
@@ -364,6 +426,12 @@ export class FlowHandler extends BaseProvider implements ApiHandler {
     }
   }
   
+  /**
+   * Converts Anthropic message format to Flow message format.
+   * @param messages - The messages to convert
+   * @param systemPrompt - The system prompt to include
+   * @returns An array of Flow formatted messages
+   */
   private convertToFlowMessages(messages: Anthropic.Messages.MessageParam[], systemPrompt: string): FlowMessage[] {
     const flowMessages = messages.map((msg) => {
       let content: Array<{ type: string; text: string }> = []
@@ -409,6 +477,13 @@ export class FlowHandler extends BaseProvider implements ApiHandler {
     return flowMessages
   }
   
+  /**
+   * Logs request details for debugging purposes.
+   * @param endpoint - The API endpoint being called
+   * @param payload - The request payload
+   * @param modelId - The model ID being used
+   * @throws Error if no model is selected
+   */
   private logRequestDetails(endpoint: string, payload: unknown, modelId: string): void {
     console.log(`[Flow] Sending request to endpoint: ${endpoint}`)
     console.log(`[Flow] Payload:`, JSON.stringify(payload, null, 2))
@@ -419,6 +494,12 @@ export class FlowHandler extends BaseProvider implements ApiHandler {
     }
   }
   
+  /**
+   * Handles streaming response from the Flow API.
+   * @param data - The streaming response data
+   * @param modelId - The model ID being used
+   * @yields Text chunks from the response
+   */
   private async *handleStreamingResponse(data: unknown, modelId: string): AsyncGenerator<any, void, unknown> {
     if (!data || typeof data !== "object") {
       throw new Error("Invalid streaming response data")
@@ -459,6 +540,13 @@ export class FlowHandler extends BaseProvider implements ApiHandler {
     }
   }
   
+  /**
+   * Handles non-streaming response from the Flow API.
+   * @param data - The response data from the Flow API
+   * @param endpoint - The API endpoint that was called
+   * @yields First a text chunk containing the response content, then usage statistics
+   * @throws Error if no content is found in the response
+   */
   private async *handleNonStreamingResponse(data: FlowModelResponse, endpoint: string): AsyncGenerator<any, void, unknown> {
     const text = extractResponseContent(data, endpoint) || ""
     
@@ -482,6 +570,14 @@ export class FlowHandler extends BaseProvider implements ApiHandler {
     }
   }
   
+  /**
+   * Handles API errors by categorizing them and taking appropriate action.
+   * @param error - The error that occurred during the API call
+   * @param systemPrompt - The system prompt that was used in the request
+   * @param messages - The messages that were sent in the request
+   * @yields Results from retry attempts if applicable
+   * @throws Error with appropriate error message based on the error type
+   */
   private async *handleApiError(
     error: unknown,
     systemPrompt: string,
@@ -525,6 +621,11 @@ export class FlowHandler extends BaseProvider implements ApiHandler {
     throw new Error(`Flow API error: ${error instanceof Error ? error.message : String(error)}`)
   }
   
+  /**
+   * Logs the completion of a request including execution time and final model used.
+   * @param startTime - The timestamp when the request started
+   * @param finalModelId - The ID of the model that was ultimately used
+   */
   private logRequestCompletion(startTime: number, finalModelId: string): void {
     const endTime = Date.now()
     const executionTime = (endTime - startTime) / 1000
@@ -532,6 +633,14 @@ export class FlowHandler extends BaseProvider implements ApiHandler {
     console.log(`[Flow] Final model used: ${finalModelId}`)
   }
   
+  /**
+   * Attempts to retry a failed request with a different model.
+   * Cycles through available models in sequence if multiple retries are needed.
+   * @param systemPrompt - The system prompt to use in the retry
+   * @param messages - The messages to retry sending
+   * @yields Results from the retried request
+   * @throws Error if the retry also fails
+   */
   private async *retryWithDifferentModel(
     systemPrompt: string,
     messages: Anthropic.Messages.MessageParam[]
