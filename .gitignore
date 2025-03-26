@@ -31,3 +31,6 @@ docs/_site/
 
 #Logging
 logs
+/.husky
+*.http
+test-flow-api.http

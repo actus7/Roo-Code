@@ -1872,7 +1872,14 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 					case "loadApiConfiguration":
 						if (message.text) {
 							try {
+								console.log(`[ClineProvider] Loading API configuration: ${message.text}`);
+								
 								const apiConfig = await this.configManager.loadConfig(message.text)
+								console.log('[ClineProvider] Config loaded:', {
+									provider: apiConfig.apiProvider,
+									hasFlowBaseUrl: !!apiConfig.flowBaseUrl
+								});
+								
 								const listApiConfig = await this.configManager.listConfig()
 
 								await Promise.all([
@@ -1882,7 +1889,10 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 								])
 
 								await this.postStateToWebview()
+								console.log('[ClineProvider] Configuration updated successfully');
+								
 							} catch (error) {
+								console.error('[ClineProvider] Error loading configuration:', error);
 								this.outputChannel.appendLine(
 									`Error load api configuration: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,
 								)
@@ -2151,25 +2161,48 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 	}
 
 	private async updateApiConfiguration(apiConfiguration: ApiConfiguration) {
-		// Update mode's default config.
-		const { mode } = await this.getState()
+		try {
+			console.log('[ClineProvider] Updating API configuration:', {
+				provider: apiConfiguration.apiProvider,
+				hasFlowBaseUrl: !!apiConfiguration.flowBaseUrl,
+				hasFlowAppToAccess: !!apiConfiguration.flowAppToAccess
+			});
 
-		if (mode) {
-			const currentApiConfigName = await this.getGlobalState("currentApiConfigName")
-			const listApiConfig = await this.configManager.listConfig()
-			const config = listApiConfig?.find((c) => c.name === currentApiConfigName)
-
-			if (config?.id) {
-				await this.configManager.setModeConfig(mode, config.id)
+			// Ensure Flow configuration is complete
+			if (apiConfiguration.apiProvider === 'flow') {
+				if (!apiConfiguration.flowAppToAccess) {
+					apiConfiguration.flowAppToAccess = 'default';
+				}
+				if (!apiConfiguration.flowBaseUrl) {
+					apiConfiguration.flowBaseUrl = 'https://flow.ciandt.com';
+				}
 			}
-		}
-		console.log("Updating API Configuration:", JSON.stringify(apiConfiguration, null, 2))
-		await this.contextProxy.setApiConfiguration(apiConfiguration)
 
-		if (this.getCurrentCline()) {
-			this.getCurrentCline()!.api = buildApiHandler(apiConfiguration)
+			// Update mode's default config.
+			const { mode } = await this.getState()
+
+			if (mode) {
+				const currentApiConfigName = await this.getGlobalState("currentApiConfigName")
+				const listApiConfig = await this.configManager.listConfig()
+				const config = listApiConfig?.find((c) => c.name === currentApiConfigName)
+
+				if (config?.id) {
+					await this.configManager.setModeConfig(mode, config.id)
+				}
+			}
+
+			await this.contextProxy.setApiConfiguration(apiConfiguration)
+
+			if (this.getCurrentCline()) {
+				const api = buildApiHandler(apiConfiguration)
+				this.getCurrentCline()!.api = api
+			}
+			
+			console.log('[ClineProvider] API Configuration updated successfully');
+		} catch (error) {
+			console.error('[ClineProvider] Error updating API configuration:', error);
+			throw error;
 		}
-		console.log("API Configuration updated successfully")
 	}
 
 	async cancelTask() {

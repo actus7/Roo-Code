@@ -27,3 +27,23 @@ Example: Requesting to ask the user for the path to the frontend-config.json fil
 </follow_up>
 </ask_followup_question>`
 }
+
+const formatFollowUpQuestion = (question: string, suggestions: string[]) => {
+	return `<ask_followup_question>
+<question>${question}</question>
+<follow_up>
+${suggestions.map((suggestion) => `<suggest>${suggestion}</suggest>`).join("\n")}
+</follow_up>
+</ask_followup_question>`
+}
+
+// Exemplo de uso:
+const question = "Qual tarefa específica gostaria que eu realizasse?"
+const suggestions = [
+	"Editar um arquivo específico no projeto",
+	"Adicionar uma nova funcionalidade ao código existente",
+	"Corrigir um bug ou problema",
+	"Realizar testes ou garantir cobertura de código",
+]
+
+const formattedQuestion = formatFollowUpQuestion(question, suggestions)

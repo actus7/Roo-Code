@@ -1,14 +1,14 @@
 import {
-  ApiProvider,
-  ModelInfo,
-  anthropicModels,
-  bedrockModels,
-  deepSeekModels,
-  geminiModels,
-  mistralModels,
-  openAiNativeModels,
-  vertexModels,
-  flowModels,
+	ApiProvider,
+	ModelInfo,
+	anthropicModels,
+	bedrockModels,
+	deepSeekModels,
+	geminiModels,
+	mistralModels,
+	openAiNativeModels,
+	vertexModels,
+	flowModels,
 } from "../../../../src/shared/api"
 
 export const MODELS_BY_PROVIDER: Partial<Record<ApiProvider, Record<string, ModelInfo>>> = {
@@ -32,14 +32,16 @@ export const FLOW_MODEL_TYPES = [
 
 export const FLOW_CONFIG = {
 	apiEndpoints: {
-		models: "/ai-orchestration-api/v1/models",
+		auth: "/auth-engine-api/v1/api-key/token",
+		modelsAzure: "/ai-orchestration-api/v1/models/azure-openai",
+		modelsBedrock: "/ai-orchestration-api/v1/models/amazon-bedrock",
 		openai: "/ai-orchestration-api/v1/openai/chat/completions",
 		google: "/ai-orchestration-api/v1/google/generateContent",
 		bedrock: "/ai-orchestration-api/v1/bedrock/invoke",
-		generateToken: "/auth-engine-api/v1/api-key/token",
 	},
-	defaultTenant: "edge",
+	defaultTenant: "cit",
 	defaultBaseUrl: "https://flow.ciandt.com",
+	defaultAppToAccess: "llm-api",
 }
 
 export const PROVIDERS = [

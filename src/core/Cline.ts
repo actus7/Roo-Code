@@ -2999,10 +2999,22 @@ export class Cline extends EventEmitter<ClineEvents> {
 											suggest: Suggest[] | Suggest
 										}
 									} catch (error) {
-										this.consecutiveMistakeCount++
-										await this.say("error", `Failed to parse operations: ${error.message}`)
-										pushToolResult(formatResponse.toolError("Invalid operations xml format"))
-										break
+										// Tenta fazer parse manual se o XML estiver malformado
+										const suggestions = follow_up
+											.split("\n")
+											.filter((line) => line.trim())
+											.map((line) => ({
+												answer: line.trim(),
+											}))
+
+										if (suggestions.length > 0) {
+											parsedSuggest = { suggest: suggestions }
+										} else {
+											this.consecutiveMistakeCount++
+											await this.say("error", `Failed to parse suggestions: ${error.message}`)
+											pushToolResult(formatResponse.toolError("Invalid suggestions format"))
+											break
+										}
 									}
 
 									const normalizedSuggest = Array.isArray(parsedSuggest?.suggest)

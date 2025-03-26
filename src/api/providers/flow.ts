@@ -53,22 +53,29 @@ export class FlowHandler extends BaseProvider implements ApiHandler {
 
 	constructor(options: ApiHandlerOptions) {
 		super()
-		this.options = options
+
+		this.options = {
+			...options,
+			flowBaseUrl: options.flowBaseUrl || DEFAULT_BASE_URL,
+			flowAppToAccess: "llm-api",
+			flowTenant: options.flowTenant || "cit",
+		}
+
+		if (!this.options.flowClientId || !this.options.flowClientSecret) {
+			throw new Error("[FlowHandler] Missing required credentials (clientId or clientSecret)")
+		}
+
 		this.validateOptions()
+
 		this.axiosInstance = axios.create({
-			baseURL: options.flowBaseUrl || DEFAULT_BASE_URL,
+			baseURL: this.options.flowBaseUrl,
 			headers: {
 				"Content-Type": "application/json",
 				Accept: "application/json",
-				flowTenant: options.flowTenant,
+				flowTenant: this.options.flowTenant,
 			},
 		})
 		this.setupAuthInterceptor()
-
-		// Inicializa os modelos disponíveis durante a construção
-		this.initializeModels().catch((error) => {
-			console.error("[FlowHandler] Error initializing models:", error)
-		})
 	}
 
 	private async initializeModels() {
@@ -117,12 +124,6 @@ export class FlowHandler extends BaseProvider implements ApiHandler {
 				const token = await this.authenticate()
 				config.headers.Authorization = `Bearer ${token}`
 				config.headers.flowTenant = this.options.flowTenant
-
-				console.log("[FlowHandler] Request headers after interceptor:", {
-					Authorization: config.headers.Authorization ? "Bearer [REDACTED]" : "None",
-					flowTenant: config.headers.flowTenant,
-				})
-
 				return config
 			},
 			(error) => {
@@ -139,7 +140,7 @@ export class FlowHandler extends BaseProvider implements ApiHandler {
 		}
 
 		if (this.tokenRefreshInProgress) {
-			let retries = 50 // 5 segundos no total
+			let retries = 50
 			while (this.tokenRefreshInProgress && retries > 0) {
 				await new Promise((resolve) => setTimeout(resolve, 100))
 				retries--
@@ -151,39 +152,44 @@ export class FlowHandler extends BaseProvider implements ApiHandler {
 
 		this.tokenRefreshInProgress = true
 		try {
-			console.log("[Flow] Authenticating...")
-			console.log("[Flow] Using base URL:", this.options.flowAuthBaseUrl || DEFAULT_BASE_URL)
-			console.log("[Flow] Using tenant:", this.options.flowTenant || "edge")
+			const authUrl = `${this.options.flowAuthBaseUrl || DEFAULT_BASE_URL}${AUTH_PATH}`
+			const payload = {
+				clientId: this.options.flowClientId,
+				clientSecret: this.options.flowClientSecret,
+				appToAccess: this.options.flowAppToAccess || "llm-api",
+			}
+			const headers = {
+				"Content-Type": "application/json",
+				Accept: "application/json",
+				flowTenant: this.options.flowTenant,
+			}
 
-			const response = await axios.post(
-				`${this.options.flowAuthBaseUrl || DEFAULT_BASE_URL}${AUTH_PATH}`,
-				{
-					clientId: this.options.flowClientId,
-					clientSecret: this.options.flowClientSecret,
-					appToAccess: this.options.flowAppToAccess || "llm-api",
-				},
-				{
-					headers: {
-						"Content-Type": "application/json",
-						Accept: "application/json",
-						flowTenant: this.options.flowTenant || "edge",
-					},
-				},
-			)
+			const response = await axios.post(authUrl, payload, { headers })
 
 			if (!response.data.access_token) {
+				console.error("[Flow] Auth response data:", response.data)
 				throw new Error("No access token received from Flow authentication")
 			}
 
 			this.token = response.data.access_token
-			// Define expiração para 55 minutos (5 minutos antes do token expirar)
 			this.tokenExpirationTime = Date.now() + 55 * 60 * 1000
 
 			return this.ensureValidToken(this.token)
 		} catch (error) {
 			this.token = null
 			this.tokenExpirationTime = null
-			console.error("[Flow] Authentication error:", error.response?.data || error.message)
+			console.error("[Flow] Authentication error details:", {
+				status: error.response?.status,
+				statusText: error.response?.statusText,
+				data: error.response?.data,
+				config: {
+					url: error.config?.url,
+					headers: {
+						...error.config?.headers,
+						Authorization: undefined, // Remove sensitive data
+					},
+				},
+			})
 			throw new Error(`Failed to authenticate with Flow: ${error.response?.data?.message || error.message}`)
 		} finally {
 			this.tokenRefreshInProgress = false
@@ -238,7 +244,7 @@ export class FlowHandler extends BaseProvider implements ApiHandler {
 				{
 					headers: {
 						Authorization: `Bearer ${token}`,
-						flowTenant: this.options.flowTenant || "edge",
+						flowTenant: this.options.flowTenant,
 					},
 				},
 			)
@@ -446,8 +452,57 @@ export class FlowHandler extends BaseProvider implements ApiHandler {
 
 			const response = await this.axiosInstance.post(`${API_PATH}${endpoint}`, payload, requestConfig)
 
-			// Se não for streaming, retorna a resposta direta
-			if (!payload.stream) {
+			if (payload.stream) {
+				// Handle streaming response
+				for await (const chunk of response.data) {
+					try {
+						const lines = chunk.toString().split("\n").filter(Boolean)
+
+						for (const line of lines) {
+							if (line.trim() === "[DONE]") {
+								continue // Skip the [DONE] message
+							}
+
+							if (line.startsWith("data: ")) {
+								const jsonStr = line.slice(6) // Remove 'data: ' prefix
+								try {
+									const data = JSON.parse(jsonStr)
+
+									// Handle different model responses
+									if (modelId.startsWith("gpt-")) {
+										const content = data.choices?.[0]?.delta?.content
+										if (content) {
+											yield {
+												type: "text",
+												text: content,
+											}
+										}
+									} else if (modelId.startsWith("anthropic.claude-")) {
+										const content = data.completion
+										if (content) {
+											yield {
+												type: "text",
+												text: content,
+											}
+										}
+									}
+									// Add other model handlers as needed
+								} catch (parseError) {
+									// Only log parsing errors for non-[DONE] messages
+									if (jsonStr.trim() !== "[DONE]") {
+										console.warn(`[Flow] Failed to parse JSON from chunk: ${jsonStr}`, parseError)
+									}
+									continue
+								}
+							}
+						}
+					} catch (chunkError) {
+						console.warn(`[Flow] Error processing chunk: ${chunk}`, chunkError)
+						continue
+					}
+				}
+			} else {
+				// Handle non-streaming response (your existing code)
 				console.log(`[Flow] Received non-streaming response:`, response.data)
 
 				const text =
@@ -472,73 +527,6 @@ export class FlowHandler extends BaseProvider implements ApiHandler {
 					inputTokens: response.data.usage?.prompt_tokens || 0,
 					outputTokens: response.data.usage?.completion_tokens || 0,
 				}
-
-				return
-			}
-
-			console.log(`[Flow] Response received, processing stream...`)
-
-			try {
-				for await (const chunk of response.data) {
-					const lines = chunk.toString().split("\n").filter(Boolean)
-					for (const line of lines) {
-						if (line.startsWith("data: ")) {
-							try {
-								const data = JSON.parse(line.slice(6))
-								console.log(`[Flow] Processing chunk:`, JSON.stringify(data, null, 2))
-
-								// Handle different response formats
-								if (endpoint === "/google/generateContent") {
-									if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
-										yield {
-											type: "text",
-											text: data.candidates[0].content.parts[0].text,
-										}
-									}
-								} else if (endpoint === "/bedrock/invoke") {
-									if (data.completion) {
-										yield {
-											type: "text",
-											text: data.completion,
-										}
-									}
-								} else {
-									// OpenAI format
-									if (data.choices?.[0]?.delta?.content) {
-										yield {
-											type: "text",
-											text: data.choices[0].delta.content,
-										}
-									} else if (data.choices?.[0]?.message?.content) {
-										yield {
-											type: "text",
-											text: data.choices[0].message.content,
-										}
-									} else if (data.choices?.[0]?.text) {
-										// Fallback para formato alternativo
-										yield {
-											type: "text",
-											text: data.choices[0].text,
-										}
-									} else if (typeof data === "string") {
-										// Fallback para resposta simples em texto
-										yield {
-											type: "text",
-											text: data,
-										}
-									}
-								}
-							} catch (error) {
-								console.error("[Flow] Error parsing stream chunk:", error)
-								console.error("[Flow] Problematic line:", line)
-								continue
-							}
-						}
-					}
-				}
-			} catch (error) {
-				console.error("[Flow] Error processing stream:", error)
-				throw error
 			}
 
 			// Yield usage information at the end
