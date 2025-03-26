@@ -19,7 +19,6 @@ export type ApiProvider =
 	| "human-relay"
 	| "fake-ai"
 	| "flow"
-	| "purecode"
 
 export interface ApiHandlerOptions {
 	apiModelId?: string
