@@ -24,6 +24,7 @@ export const providerNames = [
 	"requesty",
 	"human-relay",
 	"fake-ai",
+	"flow",
 ] as const
 
 export const providerNamesSchema = z.enum(providerNames)
@@ -387,6 +388,17 @@ export const providerSettingsSchema = z.object({
 	includeMaxTokens: z.boolean().optional(),
 	// Fake AI
 	fakeAi: z.unknown().optional(),
+	// Flow
+	flowBaseUrl: z.string().optional(),
+	flowAuthBaseUrl: z.string().optional(),
+	flowTenant: z.string().optional(),
+	flowClientId: z.string().optional(),
+	flowClientSecret: z.string().optional(),
+	flowAppToAccess: z.string().optional(),
+	flowAgent: z.string().optional(),
+	flowRequestTimeout: z.number().optional(),
+	flowModelId: z.string().optional(),
+	flowModelInfo: modelInfoSchema.optional(),
 })
 
 export type ProviderSettings = z.infer<typeof providerSettingsSchema>
@@ -471,6 +483,17 @@ const providerSettingsRecord: ProviderSettingsRecord = {
 	includeMaxTokens: undefined,
 	// Fake AI
 	fakeAi: undefined,
+	// Flow
+	flowBaseUrl: undefined,
+	flowAuthBaseUrl: undefined,
+	flowTenant: undefined,
+	flowClientId: undefined,
+	flowClientSecret: undefined,
+	flowAppToAccess: undefined,
+	flowAgent: undefined,
+	flowRequestTimeout: undefined,
+	flowModelId: undefined,
+	flowModelInfo: undefined,
 }
 
 export const PROVIDER_SETTINGS_KEYS = Object.keys(providerSettingsRecord) as Keys<ProviderSettings>[]

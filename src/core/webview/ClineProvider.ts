@@ -21,7 +21,7 @@ import {
 	openRouterDefaultModelId,
 	openRouterDefaultModelInfo,
 	glamaDefaultModelId,
-	glamaDefaultModelInfo,
+	glamaDefaultModelInfo
 } from "../../shared/api"
 import { findLast } from "../../shared/array"
 import { supportPrompt } from "../../shared/support-prompt"
@@ -946,7 +946,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 	}
 
 	// Glama
-
+	
 	async handleGlamaCallback(code: string) {
 		let apiKey: string
 		try {

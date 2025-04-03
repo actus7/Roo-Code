@@ -82,11 +82,11 @@ const ApiOptions = ({
 	const [ollamaModels, setOllamaModels] = useState<string[]>([])
 	const [lmStudioModels, setLmStudioModels] = useState<string[]>([])
 	const [vsCodeLmModels, setVsCodeLmModels] = useState<LanguageModelChatSelector[]>([])
-const [flowModels, setFlowModels] = useState<Record<string, ModelInfo>>({})
+	const [flowModels, setFlowModels] = useState<Record<string, ModelInfo>>({})
 
-const [openRouterModels, setOpenRouterModels] = useState<Record<string, ModelInfo>>({
-[openRouterDefaultModelId]: openRouterDefaultModelInfo,
-})
+	const [openRouterModels, setOpenRouterModels] = useState<Record<string, ModelInfo>>({
+		[openRouterDefaultModelId]: openRouterDefaultModelInfo,
+	})
 
 	const [glamaModels, setGlamaModels] = useState<Record<string, ModelInfo>>({
 		[glamaDefaultModelId]: glamaDefaultModelInfo,
@@ -201,69 +201,74 @@ const [openRouterModels, setOpenRouterModels] = useState<Record<string, ModelInf
 			apiConfiguration.openRouterModelId in openRouterModels,
 	})
 
-const onMessage = useCallback((event: MessageEvent) => {
-const message: ExtensionMessage = event.data
+	const onMessage = useCallback(
+		(event: MessageEvent) => {
+			const message: ExtensionMessage = event.data
 
-switch (message.type) {
-case "flowModels": {
-  const updatedModels = message.flowModels ?? {}
-  setFlowModels(updatedModels)
-  MODELS_BY_PROVIDER.flow = updatedModels
-  if (selectedProvider === "flow") {
-    const currentModelId = apiConfiguration?.apiModelId
-    if (currentModelId && !(currentModelId in updatedModels)) {
-      setApiConfigurationField("apiModelId", Object.keys(updatedModels)[0] || flowDefaultModelId)
-    }
-  }
-  break
-}
-			case "openRouterModels": {
-				const updatedModels = message.openRouterModels ?? {}
-				setOpenRouterModels({ [openRouterDefaultModelId]: openRouterDefaultModelInfo, ...updatedModels })
-				break
-			}
-			case "glamaModels": {
-				const updatedModels = message.glamaModels ?? {}
-				setGlamaModels({ [glamaDefaultModelId]: glamaDefaultModelInfo, ...updatedModels })
-				break
-			}
-			case "unboundModels": {
-				const updatedModels = message.unboundModels ?? {}
-				setUnboundModels({ [unboundDefaultModelId]: unboundDefaultModelInfo, ...updatedModels })
-				break
-			}
-			case "requestyModels": {
-				const updatedModels = message.requestyModels ?? {}
-				setRequestyModels({ [requestyDefaultModelId]: requestyDefaultModelInfo, ...updatedModels })
-				break
-			}
-			case "openAiModels": {
-				const updatedModels = message.openAiModels ?? []
-				setOpenAiModels(Object.fromEntries(updatedModels.map((item) => [item, openAiModelInfoSaneDefaults])))
-				break
-			}
-			case "ollamaModels":
-				{
-					const newModels = message.ollamaModels ?? []
-					setOllamaModels(newModels)
+			switch (message.type) {
+				case "flowModels": {
+					const updatedModels = message.flowModels ?? {}
+					setFlowModels(updatedModels)
+					MODELS_BY_PROVIDER.flow = updatedModels
+					if (selectedProvider === "flow") {
+						const currentModelId = apiConfiguration?.apiModelId
+						if (currentModelId && !(currentModelId in updatedModels)) {
+							setApiConfigurationField("apiModelId", Object.keys(updatedModels)[0] || flowDefaultModelId)
+						}
+					}
+					break
 				}
-				break
-			case "lmStudioModels":
-				{
-					const newModels = message.lmStudioModels ?? []
-					setLmStudioModels(newModels)
+				case "openRouterModels": {
+					const updatedModels = message.openRouterModels ?? {}
+					setOpenRouterModels({ [openRouterDefaultModelId]: openRouterDefaultModelInfo, ...updatedModels })
+					break
 				}
-				break
-			case "vsCodeLmModels":
-				{
-					const newModels = message.vsCodeLmModels ?? []
-					setVsCodeLmModels(newModels)
+				case "glamaModels": {
+					const updatedModels = message.glamaModels ?? {}
+					setGlamaModels({ [glamaDefaultModelId]: glamaDefaultModelInfo, ...updatedModels })
+					break
 				}
-				break
-		}
-}, [selectedProvider, apiConfiguration?.apiModelId, setApiConfigurationField])
+				case "unboundModels": {
+					const updatedModels = message.unboundModels ?? {}
+					setUnboundModels({ [unboundDefaultModelId]: unboundDefaultModelInfo, ...updatedModels })
+					break
+				}
+				case "requestyModels": {
+					const updatedModels = message.requestyModels ?? {}
+					setRequestyModels({ [requestyDefaultModelId]: requestyDefaultModelInfo, ...updatedModels })
+					break
+				}
+				case "openAiModels": {
+					const updatedModels = message.openAiModels ?? []
+					setOpenAiModels(
+						Object.fromEntries(updatedModels.map((item) => [item, openAiModelInfoSaneDefaults])),
+					)
+					break
+				}
+				case "ollamaModels":
+					{
+						const newModels = message.ollamaModels ?? []
+						setOllamaModels(newModels)
+					}
+					break
+				case "lmStudioModels":
+					{
+						const newModels = message.lmStudioModels ?? []
+						setLmStudioModels(newModels)
+					}
+					break
+				case "vsCodeLmModels":
+					{
+						const newModels = message.vsCodeLmModels ?? []
+						setVsCodeLmModels(newModels)
+					}
+					break
+			}
+		},
+		[selectedProvider, apiConfiguration?.apiModelId, setApiConfigurationField],
+	)
 
-useEvent("message", onMessage)
+	useEvent("message", onMessage)
 
 	const selectedProviderModelOptions = useMemo(
 		() =>
@@ -1571,15 +1576,15 @@ useEvent("message", onMessage)
 					</VSCodeTextField>
 					{apiConfiguration?.flowClientId && apiConfiguration?.flowClientSecret ? (
 						<>
-{Object.keys(flowModels).length > 0 ? (
-<ModelPicker
-apiConfiguration={apiConfiguration}
-setApiConfigurationField={setApiConfigurationField}
-defaultModelId={flowDefaultModelId}
-defaultModelInfo={flowModels[flowDefaultModelId]}
-models={flowModels}
-									modelIdKey="apiModelId"
-									modelInfoKey="openAiCustomModelInfo"
+							{Object.keys(flowModels).length > 0 ? (
+								<ModelPicker
+									apiConfiguration={apiConfiguration}
+									setApiConfigurationField={setApiConfigurationField}
+									defaultModelId={flowDefaultModelId}
+									defaultModelInfo={flowModels[flowDefaultModelId]}
+									models={flowModels}
+									modelIdKey="flowModelId"
+									modelInfoKey="flowModelInfo"
 									serviceName="Flow"
 									serviceUrl="https://flow.ciandt.com"
 								/>

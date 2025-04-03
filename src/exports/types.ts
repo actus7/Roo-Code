@@ -21,6 +21,7 @@ type ProviderSettings = {
 				| "requesty"
 				| "human-relay"
 				| "fake-ai"
+				| "flow"
 		  )
 		| undefined
 	apiModelId?: string | undefined
@@ -164,6 +165,31 @@ type ProviderSettings = {
 	modelMaxThinkingTokens?: number | undefined
 	includeMaxTokens?: boolean | undefined
 	fakeAi?: unknown | undefined
+	flowBaseUrl?: string | undefined
+	flowAuthBaseUrl?: string | undefined
+	flowTenant?: string | undefined
+	flowClientId?: string | undefined
+	flowClientSecret?: string | undefined
+	flowAppToAccess?: string | undefined
+	flowAgent?: string | undefined
+	flowRequestTimeout?: number | undefined
+	flowModelId?: string | undefined
+	flowModelInfo?:
+		| {
+				maxTokens?: (number | null) | undefined
+				contextWindow: number
+				supportsImages?: boolean | undefined
+				supportsComputerUse?: boolean | undefined
+				supportsPromptCache: boolean
+				inputPrice?: number | undefined
+				outputPrice?: number | undefined
+				cacheWritesPrice?: number | undefined
+				cacheReadsPrice?: number | undefined
+				description?: string | undefined
+				reasoningEffort?: ("low" | "medium" | "high") | undefined
+				thinking?: boolean | undefined
+		  }
+		| undefined
 }
 
 export type { ProviderSettings }
@@ -193,6 +219,7 @@ type GlobalSettings = {
 							| "requesty"
 							| "human-relay"
 							| "fake-ai"
+							| "flow"
 					  )
 					| undefined
 		  }[]

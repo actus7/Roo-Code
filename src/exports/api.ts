@@ -4,9 +4,9 @@ import * as vscode from "vscode"
 import { ClineProvider } from "../core/webview/ClineProvider"
 import { openClineInNewTab } from "../activate/registerCommands"
 
-import { RooCodeSettings, RooCodeEvents, RooCodeEventName, ClineMessage } from "../schemas"
+import { RooCodeEvents, RooCodeEventName, ClineMessage } from "../schemas"
 import { IpcOrigin, IpcMessageType, TaskCommandName, TaskEvent } from "../schemas/ipc"
-import { RooCodeAPI } from "./interface"
+import { RooCodeAPI, RooCodeSettings } from "./interface"
 import { IpcServer } from "./ipc"
 import { outputChannelLog } from "./log"
 
@@ -81,7 +81,7 @@ export class API extends EventEmitter<RooCodeEvents> implements RooCodeAPI {
 		images,
 		newTab,
 	}: {
-		configuration: RooCodeSettings
+		configuration?: RooCodeSettings
 		text?: string
 		images?: string[]
 		newTab?: boolean

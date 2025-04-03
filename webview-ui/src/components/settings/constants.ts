@@ -8,6 +8,7 @@ import {
 	mistralModels,
 	openAiNativeModels,
 	vertexModels,
+	flowModels,
 } from "../../../../src/shared/api"
 
 export const MODELS_BY_PROVIDER: Partial<Record<ApiProvider, Record<string, ModelInfo>>> = {
@@ -18,9 +19,33 @@ export const MODELS_BY_PROVIDER: Partial<Record<ApiProvider, Record<string, Mode
 	mistral: mistralModels,
 	"openai-native": openAiNativeModels,
 	vertex: vertexModels,
+	flow: flowModels,
+}
+
+export const FLOW_MODEL_TYPES = [
+	{ value: "openai", label: "OpenAI (GPT-4)" },
+	{ value: "anthropic", label: "Anthropic (Claude)" },
+	{ value: "bedrock", label: "AWS Bedrock" },
+	{ value: "meta", label: "Meta (Llama)" },
+	{ value: "amazon", label: "Amazon (Nova)" },
+]
+
+export const FLOW_CONFIG = {
+	apiEndpoints: {
+		auth: "/auth-engine-api/v1/api-key/token",
+		modelsAzure: "/ai-orchestration-api/v1/models/azure-openai",
+		modelsBedrock: "/ai-orchestration-api/v1/models/amazon-bedrock",
+		openai: "/ai-orchestration-api/v1/openai/chat/completions",
+		google: "/ai-orchestration-api/v1/google/generateContent",
+		bedrock: "/ai-orchestration-api/v1/bedrock/invoke",
+	},
+	defaultTenant: "cit",
+	defaultBaseUrl: "https://flow.ciandt.com",
+	defaultAppToAccess: "llm-api",
 }
 
 export const PROVIDERS = [
+	{ value: "flow", label: "CI&T Flow" },
 	{ value: "openrouter", label: "OpenRouter" },
 	{ value: "anthropic", label: "Anthropic" },
 	{ value: "gemini", label: "Google Gemini" },
