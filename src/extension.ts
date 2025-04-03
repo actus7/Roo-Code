@@ -115,8 +115,13 @@ export async function activate(context: vscode.ExtensionContext) {
 	registerCodeActions(context)
 	registerTerminalActions(context)
 
+	// Allows other extensions to activate once Roo is ready.
+	vscode.commands.executeCommand("roo-cline.activationCompleted")
+
 	// Implements the `RooCodeAPI` interface.
-	return new API(outputChannel, provider)
+	const socketPath = process.env.ROO_CODE_IPC_SOCKET_PATH
+	const enableLogging = typeof socketPath === "string"
+	return new API(outputChannel, provider, socketPath, enableLogging)
 }
 
 // This method is called when your extension is deactivated

@@ -399,14 +399,20 @@ describe("AwsBedrockHandler", () => {
 		})
 	})
 
+	//response.output.message.content[0].text
+
 	describe("completePrompt", () => {
 		it("should complete prompt successfully", async () => {
 			const mockResponse = {
-				output: new TextEncoder().encode(
-					JSON.stringify({
-						content: "Test response",
-					}),
-				),
+				output: {
+					message: {
+						content: [
+							{
+								text: "Test response",
+							},
+						],
+					},
+				},
 			}
 
 			const mockSend = jest.fn().mockResolvedValue(mockResponse)
@@ -450,7 +456,9 @@ describe("AwsBedrockHandler", () => {
 
 		it("should handle invalid response format", async () => {
 			const mockResponse = {
-				output: new TextEncoder().encode("invalid json"),
+				output: {
+					message: {},
+				},
 			}
 
 			const mockSend = jest.fn().mockResolvedValue(mockResponse)
@@ -464,9 +472,16 @@ describe("AwsBedrockHandler", () => {
 
 		it("should handle empty response", async () => {
 			const mockResponse = {
-				output: new TextEncoder().encode(JSON.stringify({})),
+				output: {
+					message: {
+						content: [
+							{
+								text: "",
+							},
+						],
+					},
+				},
 			}
-
 			const mockSend = jest.fn().mockResolvedValue(mockResponse)
 			handler["client"] = {
 				send: mockSend,
@@ -486,11 +501,15 @@ describe("AwsBedrockHandler", () => {
 			})
 
 			const mockResponse = {
-				output: new TextEncoder().encode(
-					JSON.stringify({
-						content: "Test response",
-					}),
-				),
+				output: {
+					message: {
+						content: [
+							{
+								text: "Test response",
+							},
+						],
+					},
+				},
 			}
 
 			const mockSend = jest.fn().mockResolvedValue(mockResponse)
@@ -519,11 +538,15 @@ describe("AwsBedrockHandler", () => {
 			})
 
 			const mockResponse = {
-				output: new TextEncoder().encode(
-					JSON.stringify({
-						content: "Test response",
-					}),
-				),
+				output: {
+					message: {
+						content: [
+							{
+								text: "Test response",
+							},
+						],
+					},
+				},
 			}
 
 			const mockSend = jest.fn().mockResolvedValue(mockResponse)
@@ -552,13 +575,16 @@ describe("AwsBedrockHandler", () => {
 			})
 
 			const mockResponse = {
-				output: new TextEncoder().encode(
-					JSON.stringify({
-						content: "Test response",
-					}),
-				),
+				output: {
+					message: {
+						content: [
+							{
+								text: "Test response",
+							},
+						],
+					},
+				},
 			}
-
 			const mockSend = jest.fn().mockResolvedValue(mockResponse)
 			handler["client"] = {
 				send: mockSend,
@@ -585,11 +611,15 @@ describe("AwsBedrockHandler", () => {
 			})
 
 			const mockResponse = {
-				output: new TextEncoder().encode(
-					JSON.stringify({
-						content: "Test response",
-					}),
-				),
+				output: {
+					message: {
+						content: [
+							{
+								text: "Test response",
+							},
+						],
+					},
+				},
 			}
 
 			const mockSend = jest.fn().mockResolvedValue(mockResponse)
@@ -736,15 +766,39 @@ describe("AwsBedrockHandler", () => {
 				awsRegion: "us-east-1",
 			})
 
-			const mockStreamEvent = {
-				trace: {
-					promptRouter: {
-						invokedModelId: "arn:aws:bedrock:us-east-1:123456789:foundation-model/default-model:0",
-					},
-				},
-			}
+			// Create a spy on the getModelByName method
+			const getModelByNameSpy = jest.spyOn(handler, "getModelByName")
 
-			jest.spyOn(handler, "getModel").mockReturnValue({
+			// Mock the BedrockRuntimeClient.prototype.send method
+			const mockSend = jest.spyOn(BedrockRuntimeClient.prototype, "send").mockImplementationOnce(async () => {
+				return {
+					stream: {
+						[Symbol.asyncIterator]: async function* () {
+							// First yield a trace event with invokedModelId
+							yield {
+								trace: {
+									promptRouter: {
+										invokedModelId:
+											"arn:aws:bedrock:us-east-1:123456789:foundation-model/default-model:0",
+									},
+								},
+							}
+							// Then yield the metadata event (required to finish the stream processing)
+							yield {
+								metadata: {
+									usage: {
+										inputTokens: 10,
+										outputTokens: 20,
+									},
+								},
+							}
+						},
+					},
+				}
+			})
+
+			// Mock getModel to provide a test model config
+			const getModelSpy = jest.spyOn(handler, "getModel").mockReturnValue({
 				id: "default-model",
 				info: {
 					maxTokens: 4096,
@@ -754,7 +808,24 @@ describe("AwsBedrockHandler", () => {
 				},
 			})
 
-			await handler.createMessage("system prompt", [{ role: "user", content: "user message" }]).next()
+			// Collect all yielded events to ensure completion
+			const events = []
+			const messageGenerator = handler.createMessage("system prompt", [{ role: "user", content: "user message" }])
+
+			// Use a timeout to prevent test hanging
+			const timeout = 1000
+			const startTime = Date.now()
+
+			while (true) {
+				if (Date.now() - startTime > timeout) {
+					throw new Error("Test timed out waiting for stream to complete")
+				}
+
+				const result = await messageGenerator.next()
+				events.push(result.value)
+
+				if (result.done) break
+			}
 
 			expect(handler.getModel()).toEqual({
 				id: "default-model",
