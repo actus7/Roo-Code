@@ -41,6 +41,9 @@ type ProviderSettings = {
 				description?: string | undefined
 				reasoningEffort?: ("low" | "medium" | "high") | undefined
 				thinking?: boolean | undefined
+				minTokensPerCachePoint?: number | undefined
+				maxCachePoints?: number | undefined
+				cachableFields?: string[] | undefined
 		  } | null)
 		| undefined
 	glamaApiKey?: string | undefined
@@ -60,6 +63,9 @@ type ProviderSettings = {
 				description?: string | undefined
 				reasoningEffort?: ("low" | "medium" | "high") | undefined
 				thinking?: boolean | undefined
+				minTokensPerCachePoint?: number | undefined
+				maxCachePoints?: number | undefined
+				cachableFields?: string[] | undefined
 		  } | null)
 		| undefined
 	openRouterBaseUrl?: string | undefined
@@ -97,6 +103,9 @@ type ProviderSettings = {
 				description?: string | undefined
 				reasoningEffort?: ("low" | "medium" | "high") | undefined
 				thinking?: boolean | undefined
+				minTokensPerCachePoint?: number | undefined
+				maxCachePoints?: number | undefined
+				cachableFields?: string[] | undefined
 		  } | null)
 		| undefined
 	openAiUseAzure?: boolean | undefined
@@ -139,6 +148,9 @@ type ProviderSettings = {
 				description?: string | undefined
 				reasoningEffort?: ("low" | "medium" | "high") | undefined
 				thinking?: boolean | undefined
+				minTokensPerCachePoint?: number | undefined
+				maxCachePoints?: number | undefined
+				cachableFields?: string[] | undefined
 		  } | null)
 		| undefined
 	requestyApiKey?: string | undefined
@@ -157,6 +169,9 @@ type ProviderSettings = {
 				description?: string | undefined
 				reasoningEffort?: ("low" | "medium" | "high") | undefined
 				thinking?: boolean | undefined
+				minTokensPerCachePoint?: number | undefined
+				maxCachePoints?: number | undefined
+				cachableFields?: string[] | undefined
 		  } | null)
 		| undefined
 	modelTemperature?: (number | null) | undefined
@@ -240,6 +255,7 @@ type GlobalSettings = {
 				cacheReads?: number | undefined
 				totalCost: number
 				size?: number | undefined
+				workspace?: string | undefined
 		  }[]
 		| undefined
 	autoApprovalEnabled?: boolean | undefined
