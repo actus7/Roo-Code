@@ -183,6 +183,7 @@ type ProviderSettings = {
 	modelMaxTokens?: number | undefined
 	modelMaxThinkingTokens?: number | undefined
 	includeMaxTokens?: boolean | undefined
+	rateLimitSeconds?: number | undefined
 	fakeAi?: unknown | undefined
 	flowBaseUrl?: string | undefined
 	flowAuthBaseUrl?: string | undefined

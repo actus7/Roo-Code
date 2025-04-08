@@ -762,10 +762,6 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 			await updateGlobalState("requestDelaySeconds", message.value ?? 5)
 			await provider.postStateToWebview()
 			break
-		case "rateLimitSeconds":
-			await updateGlobalState("rateLimitSeconds", message.value ?? 0)
-			await provider.postStateToWebview()
-			break
 		case "writeDelayMs":
 			await updateGlobalState("writeDelayMs", message.value)
 			await provider.postStateToWebview()

@@ -132,6 +132,21 @@ export class API extends EventEmitter<RooCodeEvents> implements RooCodeAPI {
 		return taskId
 	}
 
+	public async resumeTask(taskId: string): Promise<void> {
+		const { historyItem } = await this.sidebarProvider.getTaskWithId(taskId)
+		await this.sidebarProvider.initClineWithHistoryItem(historyItem)
+		await this.sidebarProvider.postMessageToWebview({ type: "action", action: "chatButtonClicked" })
+	}
+
+	public async isTaskInHistory(taskId: string): Promise<boolean> {
+		try {
+			await this.sidebarProvider.getTaskWithId(taskId)
+			return true
+		} catch {
+			return false
+		}
+	}
+
 	public getCurrentTaskStack() {
 		return this.sidebarProvider.getCurrentTaskStack()
 	}
@@ -172,6 +187,7 @@ export class API extends EventEmitter<RooCodeEvents> implements RooCodeAPI {
 
 	public async setConfiguration(values: RooCodeSettings) {
 		await this.sidebarProvider.setValues(values)
+		await this.sidebarProvider.providerSettingsManager.saveConfig(values.currentApiConfigName || "default", values)
 		await this.sidebarProvider.postStateToWebview()
 	}
 

@@ -90,7 +90,6 @@ export interface WebviewMessage {
 		| "searchCommits"
 		| "alwaysApproveResubmit"
 		| "requestDelaySeconds"
-		| "rateLimitSeconds"
 		| "setApiConfigPassword"
 		| "requestVsCodeLmModels"
 		| "mode"
