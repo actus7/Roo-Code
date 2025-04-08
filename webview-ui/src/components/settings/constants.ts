@@ -56,6 +56,7 @@ export const PROVIDERS = [
 	{ value: "bedrock", label: "AWS Bedrock" },
 	{ value: "glama", label: "Glama" },
 	{ value: "vscode-lm", label: "VS Code LM API" },
+	{ value: "github-copilot", label: "GitHub Copilot" },
 	{ value: "mistral", label: "Mistral" },
 	{ value: "lmstudio", label: "LM Studio" },
 	{ value: "ollama", label: "Ollama" },

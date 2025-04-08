@@ -41,6 +41,7 @@ export interface WebviewMessage {
 		| "exportSettings"
 		| "resetState"
 		| "requestOllamaModels"
+		| "requestGitHubCopilotModels"
 		| "requestLmStudioModels"
 		| "openImage"
 		| "openFile"
@@ -123,6 +124,7 @@ export interface WebviewMessage {
 		| "maxReadFileLine"
 		| "searchFiles"
 		| "toggleApiConfigPin"
+		| "githubCopilotModels"
 	text?: string
 	disabled?: boolean
 	askResponse?: ClineAskResponse

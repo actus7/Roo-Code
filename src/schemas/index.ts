@@ -29,6 +29,7 @@ export const providerNames = [
 	"human-relay",
 	"fake-ai",
 	"flow",
+	"github-copilot",
 ] as const
 
 export const providerNamesSchema = z.enum(providerNames)
@@ -381,6 +382,11 @@ export const providerSettingsSchema = z.object({
 	requestyApiKey: z.string().optional(),
 	requestyModelId: z.string().optional(),
 	requestyModelInfo: modelInfoSchema.nullish(),
+	// GitHub Copilot
+	githubCopilotModel: z.string().optional(),
+	githubCopilotModelInfo: modelInfoSchema.optional(),
+	githubCopilotBaseUrl: z.string().optional(),
+	githubBaseUrl: z.string().optional(),
 	// Claude 3.7 Sonnet Thinking
 	modelTemperature: z.number().nullish(),
 	modelMaxTokens: z.number().optional(),
@@ -400,6 +406,7 @@ export const providerSettingsSchema = z.object({
 	flowRequestTimeout: z.number().optional(),
 	flowModelId: z.string().optional(),
 	flowModelInfo: modelInfoSchema.optional(),
+
 })
 
 export type ProviderSettings = z.infer<typeof providerSettingsSchema>
@@ -462,6 +469,11 @@ const providerSettingsRecord: ProviderSettingsRecord = {
 	googleGeminiBaseUrl: undefined,
 	// OpenAI Native
 	openAiNativeApiKey: undefined,
+	// GitHub Copilot
+	githubCopilotModel: undefined,
+	githubCopilotModelInfo: undefined,
+	githubCopilotBaseUrl: undefined,
+	githubBaseUrl: undefined,
 	// Mistral
 	mistralApiKey: undefined,
 	mistralCodestralUrl: undefined,
@@ -495,6 +507,7 @@ const providerSettingsRecord: ProviderSettingsRecord = {
 	flowRequestTimeout: undefined,
 	flowModelId: undefined,
 	flowModelInfo: undefined,
+
 }
 
 export const PROVIDER_SETTINGS_KEYS = Object.keys(providerSettingsRecord) as Keys<ProviderSettings>[]

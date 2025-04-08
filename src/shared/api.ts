@@ -2,7 +2,12 @@ import { ModelInfo, ProviderName, ProviderSettings } from "../schemas"
 
 export type { ModelInfo, ProviderName as ApiProvider }
 
-export type ApiHandlerOptions = Omit<ProviderSettings, "apiProvider" | "id">
+export type ApiHandlerOptions = Omit<ProviderSettings, "apiProvider" | "id"> & {
+	// GitHub Copilot specific options
+	githubCopilotModel?: string
+	githubCopilotBaseUrl?: string
+	githubBaseUrl?: string
+}
 
 export type ApiConfiguration = ProviderSettings
 

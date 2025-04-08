@@ -16,6 +16,7 @@ import { OpenAiNativeHandler } from "./providers/openai-native"
 import { DeepSeekHandler } from "./providers/deepseek"
 import { MistralHandler } from "./providers/mistral"
 import { VsCodeLmHandler } from "./providers/vscode-lm"
+import { GitHubCopilotHandler } from "./providers/github-copilot"
 import { ApiStream } from "./transform/stream"
 import { UnboundHandler } from "./providers/unbound"
 import { RequestyHandler } from "./providers/requesty"
@@ -69,6 +70,8 @@ export function buildApiHandler(configuration: ApiConfiguration): ApiHandler {
 			return new DeepSeekHandler(options)
 		case "vscode-lm":
 			return new VsCodeLmHandler(options)
+		case "github-copilot":
+			return new GitHubCopilotHandler(options)
 		case "mistral":
 			return new MistralHandler(options)
 		case "unbound":

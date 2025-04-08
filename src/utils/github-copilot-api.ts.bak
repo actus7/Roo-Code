@@ -1,0 +1,679 @@
+import * as vscode from "vscode"
+import axios, { AxiosInstance, AxiosRequestConfig } from "axios"
+import { v4 as uuidv4 } from "uuid"
+
+/**
+ * Interface para as opções de configuração da API do GitHub Copilot
+ */
+export interface GitHubCopilotApiOptions {
+    /**
+     * Token de acesso pessoal do GitHub (opcional)
+     * Se não fornecido, tentará obter do VS Code
+     */
+    githubToken?: string
+
+    /**
+     * URL base da API do GitHub
+     */
+    githubBaseUrl?: string
+
+    /**
+     * URL base da API do GitHub Copilot
+     */
+    copilotBaseUrl?: string
+
+    /**
+     * Versão do editor (VS Code)
+     */
+    editorVersion?: string
+
+    /**
+     * Versão do plugin (Copilot Chat)
+     */
+    pluginVersion?: string
+
+    /**
+     * User Agent para as requisições
+     */
+    userAgent?: string
+}
+
+/**
+ * Interface para o token do Copilot
+ */
+export interface CopilotToken {
+    /**
+     * Token de acesso para a API do GitHub Copilot
+     */
+    token: string
+
+    /**
+     * Data de expiração do token
+     */
+    expires_at: number
+
+    /**
+     * Indica se o chat está habilitado
+     */
+    chat_enabled: boolean
+
+    /**
+     * Endpoints da API
+     */
+    endpoints: {
+        api: string
+    }
+}
+
+/**
+ * Interface para a resposta da API de modelos do GitHub Copilot
+ */
+export interface CopilotModelsResponse {
+    data: CopilotModel[]
+    object: string
+}
+
+/**
+ * Interface para um modelo do GitHub Copilot
+ */
+export interface CopilotModel {
+    id: string
+    name: string
+    vendor: string
+    version: string
+    family: string
+    object: string
+    preview: boolean
+    model_picker_enabled: boolean
+    capabilities: {
+        family: string
+        type: string
+        tokenizer: string
+        supports: {
+            streaming?: boolean
+            tool_calls?: boolean
+            parallel_tool_calls?: boolean
+            vision?: boolean
+        }
+        limits?: {
+            max_context_window_tokens?: number
+            max_output_tokens?: number
+            max_prompt_tokens?: number
+            vision?: {
+                max_prompt_image_size?: number
+                max_prompt_images?: number
+                supported_media_types?: string[]
+            }
+        }
+    }
+    policy?: {
+        state: string
+        terms: string
+    }
+}
+
+/**
+ * Interface para uma mensagem de chat
+ */
+export interface ChatMessage {
+    role: "system" | "user" | "assistant"
+    content: string
+}
+
+/**
+ * Interface para uma requisição de chat
+ */
+export interface ChatRequest {
+    messages: ChatMessage[]
+    model: string
+    temperature?: number
+    top_p?: number
+    max_tokens?: number
+    n?: number
+    stream?: boolean
+    stop?: string[]
+}
+
+/**
+ * Interface para uma resposta de chat
+ */
+export interface ChatResponse {
+    id: string
+    object: string
+    created: number
+    model: string
+    choices: {
+        index: number
+        message: {
+            role: string
+            content: string
+        }
+        finish_reason: string
+    }[]
+    usage: {
+        prompt_tokens: number
+        completion_tokens: number
+        total_tokens: number
+    }
+}
+
+/**
+ * Classe para interagir com a API do GitHub Copilot
+ */
+export class GitHubCopilotApi {
+    private githubToken?: string
+    private copilotToken?: string
+    private githubBaseUrl: string
+    private copilotBaseUrl: string
+    private editorVersion: string
+    private pluginVersion: string
+    private userAgent: string
+    private sessionId: string
+    private machineId: string
+    private githubClient: AxiosInstance
+    private copilotClient: AxiosInstance
+
+    /**
+     * Cria uma nova instância da API do GitHub Copilot
+     * @param options Opções de configuração
+     */
+    constructor(options: GitHubCopilotApiOptions = {}) {
+        this.githubToken = options.githubToken
+        this.githubBaseUrl = options.githubBaseUrl || "https://api.github.com"
+        this.copilotBaseUrl = options.copilotBaseUrl || "https://api.individual.githubcopilot.com"
+        this.editorVersion = options.editorVersion || "vscode/1.99.0"
+        this.pluginVersion = options.pluginVersion || "copilot-chat/0.26.0"
+        this.userAgent = options.userAgent || "GitHubCopilotChat/0.26.0"
+
+        // Gerar IDs de sessão e máquina
+        this.sessionId = `${uuidv4()}${Date.now()}`
+        this.machineId = uuidv4().replace(/-/g, '')
+
+        // Criar clientes HTTP
+        this.githubClient = axios.create({
+            baseURL: this.githubBaseUrl,
+            headers: {
+                "Connection": "keep-alive",
+                "X-GitHub-Api-Version": "2025-04-01",
+                "Editor-Version": this.editorVersion,
+                "Editor-Plugin-Version": this.pluginVersion,
+                "User-Agent": this.userAgent,
+                "X-VSCode-User-Agent-Library-Version": "node-fetch",
+                "Accept": "*/*",
+                "Accept-Language": "*",
+                "Sec-Fetch-Mode": "cors",
+                "Accept-Encoding": "br, gzip, deflate"
+            }
+        })
+
+        this.copilotClient = axios.create({
+            baseURL: this.copilotBaseUrl,
+            headers: {
+                "Host": "api.individual.githubcopilot.com",
+                "Connection": "keep-alive",
+                "X-GitHub-Api-Version": "2025-04-01",
+                "Copilot-Integration-Id": "vscode-chat",
+                "VScode-SessionId": this.sessionId,
+                "VScode-MachineId": this.machineId,
+                "Editor-Version": this.editorVersion,
+                "Editor-Plugin-Version": this.pluginVersion,
+                "User-Agent": this.userAgent,
+                "X-VSCode-User-Agent-Library-Version": "node-fetch",
+                "Accept": "*/*",
+                "Accept-Language": "*",
+                "Sec-Fetch-Mode": "cors",
+                "Accept-Encoding": "br, gzip, deflate"
+            }
+        })
+    }
+
+    /**
+     * Tenta obter o token do GitHub do VS Code
+     * @returns Token do GitHub ou undefined se não encontrado
+     */
+    private async getGitHubTokenFromVSCode(): Promise<string | undefined> {
+        try {
+            // Tenta obter a sessão do GitHub do VS Code
+            const session = await vscode.authentication.getSession('github', ['read:user'], { createIfNone: false })
+            return session?.accessToken
+        } catch (error) {
+            console.error("Erro ao obter token do GitHub do VS Code:", error)
+            return undefined
+        }
+    }
+
+    /**
+     * Obtém o token do GitHub
+     * @returns Token do GitHub
+     * @throws Erro se não for possível obter o token
+     */
+    private async getGitHubToken(): Promise<string> {
+        // Se já temos um token, retorna ele
+        if (this.githubToken) {
+            return this.githubToken
+        }
+
+        // Tenta obter o token do VS Code
+        const tokenFromVSCode = await this.getGitHubTokenFromVSCode()
+        if (tokenFromVSCode) {
+            this.githubToken = tokenFromVSCode
+            return tokenFromVSCode
+        }
+
+        // Se não conseguiu obter o token, lança um erro
+        throw new Error("Não foi possível obter o token do GitHub. Por favor, faça login no GitHub no VS Code.")
+    }
+
+    /**
+     * Obtém o token do Copilot
+     * @returns Token do Copilot
+     * @throws Erro se não for possível obter o token
+     */
+    public async getCopilotToken(): Promise<string> {
+        // Se já temos um token válido, retorna ele
+        if (this.copilotToken) {
+            return this.copilotToken
+        }
+
+        try {
+            // Obtém o token do GitHub
+            const githubToken = await this.getGitHubToken()
+
+            // Faz a requisição para obter o token do Copilot
+            const response = await this.githubClient.get<CopilotToken>("/copilot_internal/v2/token", {
+                headers: {
+                    "Authorization": `token ${githubToken}`
+                }
+            })
+
+            // Armazena o token
+            this.copilotToken = response.data.token
+
+            // Configura o cliente do Copilot com o token
+            this.copilotClient.defaults.headers.common["Authorization"] = `Bearer ${this.copilotToken}`
+
+            return this.copilotToken
+        } catch (error) {
+            console.error("Erro ao obter token do Copilot:", error)
+            throw new Error("Não foi possível obter o token do Copilot. Verifique se você tem acesso ao GitHub Copilot.")
+        }
+    }
+
+    /**
+     * Obtém a lista de modelos disponíveis no GitHub Copilot
+     * @returns Lista de modelos
+     */
+    public async getModels(): Promise<CopilotModel[]> {
+        try {
+            // Garante que temos um token válido
+            await this.getCopilotToken()
+
+            // Faz a requisição para obter os modelos
+            const response = await this.copilotClient.get<CopilotModelsResponse>("/models", {
+                headers: {
+                    "X-Request-Id": uuidv4(),
+                    "X-Interaction-Type": "model-access",
+                    "OpenAI-Intent": "model-access"
+                }
+            })
+
+            return response.data.data
+        } catch (error) {
+            console.error("Erro ao obter modelos do Copilot:", error)
+            throw new Error("Não foi possível obter a lista de modelos do GitHub Copilot.")
+        }
+    }
+
+    /**
+     * Envia uma requisição de chat para o GitHub Copilot
+     * @param request Requisição de chat
+     * @param initiator Tipo de iniciador ("agent" para classificação, "user" para resposta direta)
+     * @returns Resposta do chat
+     */
+    public async sendChatRequest(request: ChatRequest, initiator: "agent" | "user" = "agent"): Promise<string> {
+        try {
+            // Garante que temos um token válido
+            await this.getCopilotToken()
+
+            // Gerar IDs para a requisição
+            const requestId = uuidv4();
+            const interactionId = uuidv4();
+
+            // Cria o corpo da requisição com os parâmetros exatos do exemplo
+            const requestBody: ChatRequest = {
+                messages: request.messages,
+                model: request.model,
+                temperature: request.temperature || 0.1,
+                top_p: request.top_p || 1,
+                max_tokens: request.max_tokens || 16384,
+                n: request.n || 1,
+                stream: request.stream || false
+            }
+
+            console.debug("GitHub Copilot API: Enviando requisição", {
+                requestId,
+                interactionId,
+                initiator,
+                model: requestBody.model
+            });
+
+            return this.handleNonStreamingRequest(requestBody, requestId, interactionId, initiator);
+        } catch (error) {
+            console.error("Erro ao enviar requisição de chat:", error);
+
+            // Tenta com modelo alternativo como último recurso
+            try {
+                const alternativeModel = "gpt-4o";
+                console.debug(`GitHub Copilot API: Tentando com modelo alternativo ${alternativeModel}`);
+
+                // Simplifica as mensagens para o modelo alternativo
+                const simplifiedMessages: ChatMessage[] = [
+                    { role: "system", content: "Você é um assistente de programação. Responda de forma direta e técnica." },
+                    {
+                        role: "user",
+                        content: typeof request.messages[request.messages.length - 1]?.content === "string"
+                            ? request.messages[request.messages.length - 1]?.content as string
+                            : ""
+                    }
+                ];
+
+                // Cria uma nova requisição com o modelo alternativo
+                const alternativeRequest: ChatRequest = {
+                    messages: simplifiedMessages,
+                    model: alternativeModel,
+                    temperature: 0.1,
+                    top_p: 1,
+                    max_tokens: 4000,
+                    stream: false
+                };
+
+                // Gera novos IDs para a requisição alternativa
+                const altRequestId = uuidv4();
+                const altInteractionId = uuidv4();
+
+                return this.handleNonStreamingRequest(alternativeRequest, altRequestId, altInteractionId, "user");
+            } catch (alternativeError) {
+                console.error("Erro com modelo alternativo:", alternativeError);
+                return "Desculpe, não consegui gerar uma resposta. Por favor, tente novamente ou use outro modelo.";
+            }
+        }
+    }
+
+    /**
+     * Envia uma requisição de chat para o GitHub Copilot com suporte a streaming
+     * @param request Requisição de chat (deve ter stream: true)
+     * @param initiator Tipo de iniciador ("agent" para classificação, "user" para resposta direta)
+     * @param onChunk Callback chamado para cada chunk de resposta recebido
+     * @returns Resposta completa após o fim do streaming
+     */
+    public async sendChatRequestStream(
+        request: ChatRequest, 
+        initiator: "agent" | "user" = "agent",
+        onChunk: (chunk: string) => void
+    ): Promise<string> {
+        try {
+            // Garante que temos um token válido
+            await this.getCopilotToken()
+
+            // Garante que o streaming está habilitado
+            if (!request.stream) {
+                request.stream = true
+            }
+
+            // Gerar IDs para a requisição
+            const requestId = uuidv4()
+            const interactionId = uuidv4()
+
+            // Cria o corpo da requisição com os parâmetros exatos do exemplo
+            const requestBody: ChatRequest = {
+                messages: request.messages,
+                model: request.model,
+                temperature: request.temperature || 0.1,
+                top_p: request.top_p || 1,
+                max_tokens: request.max_tokens || 16384,
+                n: request.n || 1,
+                stream: true
+            }
+
+            console.debug("GitHub Copilot API: Enviando requisição com streaming", {
+                requestId,
+                interactionId,
+                initiator,
+                model: requestBody.model
+            })
+
+            // Configura headers exatamente como no exemplo
+            const headers = {
+                "X-Request-Id": requestId,
+                "X-Interaction-Type": "conversation-panel",
+                "OpenAI-Intent": "conversation-panel",
+                "X-GitHub-Api-Version": "2025-04-01",
+                "Copilot-Integration-Id": "vscode-chat",
+                "VScode-SessionId": this.sessionId,
+                "VScode-MachineId": this.machineId,
+                "X-Interaction-Id": interactionId,
+                "X-Initiator": initiator,
+                "Editor-Version": this.editorVersion,
+                "Editor-Plugin-Version": this.pluginVersion,
+                "User-Agent": this.userAgent,
+                "Content-Type": "application/json"
+            }
+
+            // Acumula a resposta completa
+            let fullResponse = ""
+
+            // Faz a requisição para a API do Copilot com streaming
+            const response = await this.copilotClient.post("/chat/completions",
+                requestBody,
+                {
+                    headers,
+                    timeout: 60000, // 60 segundos de timeout para streaming
+                    responseType: "text",
+                    responseEncoding: "utf8",
+                    transformResponse: (data) => {
+                        // Não transformar a resposta, queremos o texto bruto
+                        return data
+                    }
+                }
+            )
+
+            // Processando a resposta completa de uma vez
+            if (response.data) {
+                const lines = response.data.split('\n')
+                let responseBuffer = ""
+                
+                for (const line of lines) {
+                    if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+                        try {
+                            const jsonData = JSON.parse(line.substring(6))
+                            
+                            // Extrai o conteúdo do chunk
+                            let chunk = ""
+                            if (jsonData.choices && jsonData.choices.length > 0) {
+                                const choice = jsonData.choices[0]
+                                if (choice.delta && choice.delta.content) {
+                                    chunk = choice.delta.content
+                                } else if (choice.message && choice.message.content) {
+                                    chunk = choice.message.content
+                                }
+                            }
+                            
+                            if (chunk) {
+                                // Limpa o chunk
+                                const cleanedChunk = this.cleanResponse(chunk)
+                                
+                                // Adiciona ao buffer
+                                responseBuffer += cleanedChunk
+                                
+                                // Chama o callback com o chunk limpo
+                                onChunk(cleanedChunk)
+                            }
+                        } catch (parseError) {
+                            console.error("Erro ao processar chunk:", parseError)
+                        }
+                    }
+                }
+                
+                // Armazena a resposta completa
+                fullResponse = responseBuffer
+            }
+
+            // Retorna a resposta completa acumulada
+            return fullResponse
+        } catch (error) {
+            console.error("Erro ao enviar requisição de chat com streaming:", error)
+
+            // Tenta com modelo alternativo como último recurso
+            try {
+                const alternativeModel = "gpt-4o"
+                console.debug(`GitHub Copilot API: Tentando modelo alternativo ${alternativeModel} sem streaming`)
+
+                // Simplifica as mensagens para o modelo alternativo
+                const simplifiedMessages: ChatMessage[] = [
+                    { role: "system", content: "Você é um assistente de programação. Responda de forma direta e técnica." },
+                    {
+                        role: "user",
+                        content: typeof request.messages[request.messages.length - 1]?.content === "string"
+                            ? request.messages[request.messages.length - 1]?.content as string
+                            : ""
+                    }
+                ]
+
+                // Cria uma nova requisição com o modelo alternativo
+                const alternativeRequest: ChatRequest = {
+                    messages: simplifiedMessages,
+                    model: alternativeModel,
+                    temperature: 0.1,
+                    top_p: 1,
+                    max_tokens: 4000,
+                    stream: false
+                }
+
+                // Usa a versão não-streaming como fallback
+                const fallbackResponse = await this.sendChatRequest(alternativeRequest, "user")
+                
+                // Chama o callback com a resposta completa
+                onChunk(fallbackResponse)
+                
+                return fallbackResponse
+            } catch (alternativeError) {
+                console.error("Erro com modelo alternativo:", alternativeError)
+                const errorMessage = "Desculpe, não consegui gerar uma resposta. Por favor, tente novamente ou use outro modelo."
+                
+                // Chama o callback com a mensagem de erro
+                onChunk(errorMessage)
+                
+                return errorMessage
+            }
+        }
+    }
+
+    /**
+     * Processa uma requisição sem streaming
+     * @param requestBody Corpo da requisição
+     * @param requestId ID da requisição
+     * @param interactionId ID da interação
+     * @param initiator Tipo de iniciador
+     * @returns Resposta do chat
+     */
+    private async handleNonStreamingRequest(
+        requestBody: ChatRequest,
+        requestId: string,
+        interactionId: string,
+        initiator: "agent" | "user"
+    ): Promise<string> {
+        console.debug("GitHub Copilot API: Processando requisição");
+
+        try {
+            // Configura headers exatamente como no exemplo
+            const headers = {
+                "X-Request-Id": requestId,
+                "X-Interaction-Type": "conversation-panel",
+                "OpenAI-Intent": "conversation-panel",
+                "X-GitHub-Api-Version": "2025-04-01",
+                "Copilot-Integration-Id": "vscode-chat",
+                "VScode-SessionId": this.sessionId,
+                "VScode-MachineId": this.machineId,
+                "X-Interaction-Id": interactionId,
+                "X-Initiator": initiator,
+                "Editor-Version": this.editorVersion,
+                "Editor-Plugin-Version": this.pluginVersion,
+                "User-Agent": this.userAgent,
+                "Content-Type": "application/json"
+            };
+
+            // Faz a requisição para a API do Copilot
+            const response = await this.copilotClient.post("/chat/completions",
+                requestBody,
+                {
+                    headers,
+                    timeout: 30000 // 30 segundos de timeout
+                }
+            );
+
+            // Extrai o conteúdo da resposta
+            if (response.data) {
+                // Formato OpenAI
+                if (response.data.choices && response.data.choices.length > 0) {
+                    const choice = response.data.choices[0];
+
+                    if (choice.message && choice.message.content) {
+                        return this.cleanResponse(choice.message.content);
+                    }
+                    if (choice.delta && choice.delta.content) {
+                        return this.cleanResponse(choice.delta.content);
+                    }
+                    if (choice.text) {
+                        return this.cleanResponse(choice.text);
+                    }
+                    if (choice.content) {
+                        return this.cleanResponse(choice.content);
+                    }
+                }
+
+                // Formato direto
+                if (response.data.content) {
+                    return this.cleanResponse(response.data.content);
+                }
+                if (response.data.text) {
+                    return this.cleanResponse(response.data.text);
+                }
+                if (typeof response.data === 'string') {
+                    return this.cleanResponse(response.data);
+                }
+            }
+
+            // Se não conseguiu extrair o conteúdo
+            throw new Error("Não foi possível extrair conteúdo da resposta");
+        } catch (error) {
+            console.error("GitHub Copilot API: Erro na requisição:", error);
+            throw error;
+        }
+    }
+
+    /**
+     * Limpa a resposta do modelo de caracteres e padrões indesejados
+     * @param response Resposta original
+     * @returns Resposta limpa
+     */
+    public cleanResponse(response: string): string {
+        if (!response) return "";
+
+        // Remove caracteres de controle e espaços extras
+        let cleaned = response.trim();
+
+        // Remove mensagens de erro comuns
+        cleaned = cleaned.replace(/\[ERROR\].*\n/g, "");
+        cleaned = cleaned.replace(/Reminder: Instructions for Tool Use.*\n/g, "");
+        cleaned = cleaned.replace(/You did not use a tool.*\n/g, "");
+        cleaned = cleaned.replace(/Tool uses are formatted.*\n/g, "");
+        cleaned = cleaned.replace(/Always adhere to this format.*\n/g, "");
+        cleaned = cleaned.replace(/Roo está tendo problemas.*/g, "");
+        cleaned = cleaned.replace(/Roo Code uses complex prompts.*/g, "");
+        cleaned = cleaned.replace(/This may indicate a failure.*/g, "");
+        cleaned = cleaned.replace(/which can be mitigated with some user guidance.*/g, "");
+        cleaned = cleaned.replace(/For best results.*/g, "");
+
+        return cleaned;
+    }
+}

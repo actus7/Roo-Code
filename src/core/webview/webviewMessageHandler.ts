@@ -443,6 +443,51 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 			// TODO: Cache like we do for OpenRouter, etc?
 			provider.postMessageToWebview({ type: "vsCodeLmModels", vsCodeLmModels })
 			break
+		case "requestGitHubCopilotModels":
+			try {
+				// Criar instância da API do GitHub Copilot
+				const { apiConfiguration } = await provider.getState()
+				const { GitHubCopilotApi } = await import("../../utils/github-copilot-api")
+				const api = new GitHubCopilotApi({
+					copilotBaseUrl: apiConfiguration.githubCopilotBaseUrl || "https://api.individual.githubcopilot.com"
+				})
+
+				// Obter modelos disponíveis
+				const models = await api.getModels()
+
+				// Converter para o formato esperado pelo ModelPicker
+				const githubCopilotModels: Record<string, any> = {}
+				for (const model of models) {
+					// Só incluir modelos que estão habilitados para o seletor de modelos
+					if (model.model_picker_enabled) {
+						githubCopilotModels[model.id] = {
+							maxTokens: model.capabilities.limits?.max_output_tokens || 16384,
+							contextWindow: model.capabilities.limits?.max_context_window_tokens || 200000,
+							supportsImages: !!model.capabilities.limits?.vision,
+							supportsPromptCache: true,
+							inputPrice: 0, // GitHub Copilot não cobra por tokens
+							outputPrice: 0, // GitHub Copilot não cobra por tokens
+							description: `GitHub Copilot: ${model.name} (${model.vendor})`,
+						}
+					}
+				}
+
+				// Enviar modelos para a webview
+				provider.postMessageToWebview({ type: "githubCopilotModels", githubCopilotModels })
+
+				// Salvar modelos em cache
+				await provider.writeModelsToCache(GlobalFileNames.githubCopilotModels, githubCopilotModels)
+			} catch (error) {
+				console.error("Erro ao obter modelos do GitHub Copilot:", error)
+
+				// Tentar carregar modelos do cache
+				provider.readModelsFromCache(GlobalFileNames.githubCopilotModels).then((githubCopilotModels) => {
+					if (githubCopilotModels) {
+						provider.postMessageToWebview({ type: "githubCopilotModels", githubCopilotModels })
+					}
+				})
+			}
+			break
 		case "openImage":
 			openImage(message.text!)
 			break

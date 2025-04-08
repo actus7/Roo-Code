@@ -26,12 +26,12 @@ import { ModelInfoView } from "./ModelInfoView"
 
 type ModelIdKey = keyof Pick<
 	ProviderSettings,
-	"glamaModelId" | "openRouterModelId" | "unboundModelId" | "requestyModelId" | "openAiModelId" | "flowModelId"
+	"glamaModelId" | "openRouterModelId" | "unboundModelId" | "requestyModelId" | "openAiModelId" | "flowModelId" | "githubCopilotModel"
 >
 
 type ModelInfoKey = keyof Pick<
 	ProviderSettings,
-	"glamaModelInfo" | "openRouterModelInfo" | "unboundModelInfo" | "requestyModelInfo" | "openAiCustomModelInfo" | "flowModelInfo"
+	"glamaModelInfo" | "openRouterModelInfo" | "unboundModelInfo" | "requestyModelInfo" | "openAiCustomModelInfo" | "flowModelInfo" | "githubCopilotModelInfo"
 >
 
 interface ModelPickerProps {

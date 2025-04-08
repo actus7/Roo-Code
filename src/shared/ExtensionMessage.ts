@@ -70,6 +70,7 @@ export interface ExtensionMessage {
 		| "fileSearchResults"
 		| "toggleApiConfigPin"
 		| "flowModels"
+		| "githubCopilotModels"
 	text?: string
 	action?:
 		| "chatButtonClicked"
@@ -93,6 +94,7 @@ export interface ExtensionMessage {
 	partialMessage?: ClineMessage
 	openRouterModels?: Record<string, ModelInfo>
 	flowModels?: Record<string, ModelInfo>
+	githubCopilotModels?: Record<string, ModelInfo>
 	glamaModels?: Record<string, ModelInfo>
 	unboundModels?: Record<string, ModelInfo>
 	requestyModels?: Record<string, ModelInfo>

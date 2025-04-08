@@ -101,6 +101,7 @@ const ApiOptions = ({
 	})
 
 	const [openAiModels, setOpenAiModels] = useState<Record<string, ModelInfo> | null>(null)
+	const [githubCopilotModels, setGitHubCopilotModels] = useState<Record<string, ModelInfo>>({})
 
 	const [anthropicBaseUrlSelected, setAnthropicBaseUrlSelected] = useState(!!apiConfiguration?.anthropicBaseUrl)
 	const [azureApiVersionSelected, setAzureApiVersionSelected] = useState(!!apiConfiguration?.azureApiVersion)
@@ -155,6 +156,8 @@ const ApiOptions = ({
 				vscode.postMessage({ type: "requestLmStudioModels", text: apiConfiguration?.lmStudioBaseUrl })
 			} else if (selectedProvider === "vscode-lm") {
 				vscode.postMessage({ type: "requestVsCodeLmModels" })
+			} else if (selectedProvider === "github-copilot") {
+				vscode.postMessage({ type: "requestGitHubCopilotModels" })
 			} else if (
 				selectedProvider === "flow" &&
 				apiConfiguration?.flowClientId &&
@@ -261,6 +264,12 @@ const ApiOptions = ({
 					{
 						const newModels = message.vsCodeLmModels ?? []
 						setVsCodeLmModels(newModels)
+					}
+					break
+				case "githubCopilotModels":
+					{
+						const newModels = message.githubCopilotModels ?? {}
+						setGitHubCopilotModels(newModels)
 					}
 					break
 			}
@@ -1455,6 +1464,53 @@ const ApiOptions = ({
 				</>
 			)}
 
+			{selectedProvider === "github-copilot" && (
+				<>
+					<ModelPicker
+						apiConfiguration={apiConfiguration}
+						setApiConfigurationField={setApiConfigurationField}
+						defaultModelId="claude-3.7-sonnet"
+						defaultModelInfo={{
+							maxTokens: 16384,
+							contextWindow: 200000,
+							supportsImages: true,
+							supportsPromptCache: true,
+							inputPrice: 0,
+							outputPrice: 0,
+							description: "GitHub Copilot: Claude 3.7 Sonnet",
+						}}
+						models={githubCopilotModels}
+						modelIdKey="githubCopilotModel"
+						modelInfoKey="githubCopilotModelInfo"
+						serviceName="GitHub Copilot"
+						serviceUrl="https://github.com/features/copilot"
+					/>
+
+					<div className="mt-4">
+						<label className="block font-medium mb-1">URL Base do GitHub Copilot (opcional)</label>
+						<VSCodeTextField
+							value={apiConfiguration?.githubCopilotBaseUrl || ""}
+							onInput={handleInputChange("githubCopilotBaseUrl")}
+							placeholder="https://api.individual.githubcopilot.com"
+							className="w-full"
+						/>
+					</div>
+
+					<div className="mt-4 p-2 border border-vscode-infoForeground rounded-md">
+						<div className="text-sm font-medium text-vscode-infoForeground">
+							Informação: Acesso ao GitHub Copilot
+						</div>
+						<div className="text-sm text-vscode-descriptionForeground mt-1">
+							Este provedor usa a API do GitHub Copilot para acessar o Claude 3.7 Sonnet e outros modelos.
+							<ul className="list-disc pl-5 mt-1">
+								<li>Você precisa ter uma assinatura ativa do GitHub Copilot</li>
+								<li>A autenticação é feita automaticamente através do VS Code</li>
+							</ul>
+						</div>
+					</div>
+				</>
+			)}
+
 			{/* Model Pickers */}
 
 			{selectedProvider === "openrouter" && (
@@ -1839,6 +1895,16 @@ export function normalizeApiConfiguration(apiConfiguration?: ApiConfiguration) {
 				selectedModelInfo: {
 					...openAiModelInfoSaneDefaults,
 					supportsImages: false, // VSCode LM API currently doesn't support images.
+				},
+			}
+		case "github-copilot":
+			return {
+				selectedProvider: provider,
+				selectedModelId: apiConfiguration?.githubCopilotModel || "claude-3.7-sonnet",
+				selectedModelInfo: {
+					...openAiModelInfoSaneDefaults,
+					supportsImages: true,
+					description: "GitHub Copilot: Claude 3.7 Sonnet",
 				},
 			}
 		case "flow":

@@ -21,6 +21,7 @@ type ProviderSettings = {
 				| "human-relay"
 				| "fake-ai"
 				| "flow"
+				| "github-copilot"
 		  )
 		| undefined
 	apiModelId?: string | undefined
@@ -174,6 +175,9 @@ type ProviderSettings = {
 				cachableFields?: string[] | undefined
 		  } | null)
 		| undefined
+	githubCopilotModel?: string | undefined
+	githubCopilotBaseUrl?: string | undefined
+	githubBaseUrl?: string | undefined
 	modelTemperature?: (number | null) | undefined
 	modelMaxTokens?: number | undefined
 	modelMaxThinkingTokens?: number | undefined
@@ -202,6 +206,9 @@ type ProviderSettings = {
 				description?: string | undefined
 				reasoningEffort?: ("low" | "medium" | "high") | undefined
 				thinking?: boolean | undefined
+				minTokensPerCachePoint?: number | undefined
+				maxCachePoints?: number | undefined
+				cachableFields?: string[] | undefined
 		  }
 		| undefined
 }
@@ -232,6 +239,7 @@ type GlobalSettings = {
 							| "human-relay"
 							| "fake-ai"
 							| "flow"
+							| "github-copilot"
 					  )
 					| undefined
 		  }[]

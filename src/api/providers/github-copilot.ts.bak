@@ -1,0 +1,970 @@
+import { Anthropic } from "@anthropic-ai/sdk"
+import * as vscode from "vscode"
+
+import { SingleCompletionHandler } from "../"
+import { ApiStream } from "../transform/stream"
+import { ApiHandlerOptions, ModelInfo, openAiModelInfoSaneDefaults } from "../../shared/api"
+import { BaseProvider } from "./base-provider"
+import { GitHubCopilotApi, CopilotModel } from "../../utils/github-copilot-api"
+
+// Fator de ajuste para contagem de tokens
+const TOKEN_FUDGE_FACTOR = 1.5;
+
+/**
+ * Handles interaction with GitHub Copilot API for chat-based operations.
+ * This handler extends BaseProvider to provide GitHub Copilot specific functionality.
+ *
+ * @extends {BaseProvider}
+ *
+ * @remarks
+ * The handler manages a GitHub Copilot API client and provides methods to:
+ * - Create and manage chat client instances
+ * - Stream messages using GitHub Copilot's API
+ * - Retrieve model information
+ */
+export class GitHubCopilotHandler extends BaseProvider implements SingleCompletionHandler {
+    protected options: ApiHandlerOptions
+    private api: GitHubCopilotApi
+    private models: CopilotModel[] = []
+    private currentRequestCancellation: vscode.CancellationTokenSource | null = null
+
+    /**
+     * Cria uma nova instância do handler do GitHub Copilot
+     * @param options Opções de configuração
+     */
+    constructor(options: ApiHandlerOptions) {
+        super()
+        this.options = options
+
+        // Criar instância da API do GitHub Copilot
+        this.api = new GitHubCopilotApi({
+            githubBaseUrl: this.options.githubBaseUrl,
+            copilotBaseUrl: this.options.githubCopilotBaseUrl || "https://api.individual.githubcopilot.com"
+        })
+    }
+
+    /**
+     * Garante que o estado está limpo antes de iniciar uma nova requisição
+     * Cancela requisições anteriores para evitar conflitos
+     */
+    private ensureCleanState(): void {
+        if (this.currentRequestCancellation) {
+            try {
+                this.currentRequestCancellation.cancel()
+            } catch (error) {
+                console.error("Roo Code <GitHub Copilot API>: Error cancelling request:", error)
+            }
+            this.currentRequestCancellation = null
+        }
+
+        this.currentRequestCancellation = new vscode.CancellationTokenSource()
+    }
+
+    /**
+     * Implementa a interface ApiHandler createMessage
+     * Cria e envia uma mensagem para o GitHub Copilot
+     *
+     * @param systemPrompt Prompt do sistema
+     * @param messages Mensagens da conversa
+     * @returns Stream de resposta da API
+     */
+    async *createMessage(systemPrompt: string, messages: Anthropic.Messages.MessageParam[]): ApiStream {
+        // Garante que o estado está limpo antes de iniciar uma nova requisição
+        this.ensureCleanState();
+
+        try {
+            // Obtém o modelo selecionado
+            const model = await this.getSelectedModel();
+
+            // Extrai a última mensagem do usuário para uso em prompts diretos
+            const lastUserMessage = messages
+                .filter(msg => msg.role === "user")
+                .pop();
+
+            const lastUserContent = typeof lastUserMessage?.content === "string"
+                ? lastUserMessage.content
+                : Array.isArray(lastUserMessage?.content)
+                    ? lastUserMessage.content
+                        .filter(block => block.type === "text")
+                        .map(block => (block as any).text)
+                        .join("\n")
+                    : "";
+
+            // Cria um prompt de sistema mais específico com instruções claras
+            const enhancedSystemPrompt = `Você é um assistente de programação técnico e direto. NUNCA use introduções ou cumprimentos.
+
+REGRAS ESTRITAS (OBRIGATÓRIAS):
+1. NUNCA comece suas respostas com "Olá", "Claro", "Certamente", "Como posso ajudar" ou qualquer introdução.
+2. VÁ DIRETO AO PONTO. Responda à pergunta imediatamente sem preâmbulos.
+3. Se for solicitado a fazer uma lista, comece IMEDIATAMENTE com "1." sem qualquer texto introdutório.
+4. Se for perguntado sobre provedores disponíveis, liste TODOS os provedores de IA da extensão Roo-Code.
+5. NUNCA pergunte "Como posso ajudar?" ou qualquer variação disso.
+6. NUNCA use frases introdutórias como "Baseado no código" ou "Analisando o arquivo".
+7. Forneça APENAS informações técnicas precisas e relevantes.
+8. Suas respostas devem ser DIRETAS e ESPECÍFICAS.
+9. NUNCA inclua a frase "Roo está tendo problemas..." em suas respostas.
+10. NUNCA mencione "Claude 3.7 Sonnet" ou qualquer outro modelo em suas respostas.
+11. NUNCA inclua a frase "This may indicate a failure in his thought process" em suas respostas.
+12. NUNCA inclua a frase "which can be mitigated with some user guidance" em suas respostas.
+
+${systemPrompt || ""}`;
+
+            // Prepara as mensagens para a API do GitHub Copilot
+            const copilotMessages: Array<{role: "system" | "user" | "assistant", content: string}> = [
+                { role: "system", content: enhancedSystemPrompt }
+            ];
+
+            // Adiciona as mensagens do histórico
+            for (const msg of messages) {
+                const msgRole = msg.role;
+                let content = "";
+
+                if (typeof msg.content === "string") {
+                    content = msg.content;
+                } else if (Array.isArray(msg.content)) {
+                    content = msg.content
+                        .filter(block => block.type === "text")
+                        .map(block => (block as any).text)
+                        .join("\n");
+                }
+
+                if (content) {
+                    if (msgRole === "user") {
+                        // Modifica a mensagem do usuário para forçar uma resposta direta
+                        content = `RESPONDA DIRETAMENTE SEM INTRODUÇÕES OU CUMPRIMENTOS: ${content}`;
+                        copilotMessages.push({ role: "user", content });
+                    } else if (msgRole === "assistant") {
+                        copilotMessages.push({ role: "assistant", content });
+                    }
+                }
+            }
+
+            try {
+                // Tenta usar streaming
+                console.debug("Roo Code <GitHub Copilot API>: Tentando usar streaming");
+                
+                // Variáveis para controlar o streaming
+                let fullResponse = "";
+                
+                // Primeiro chunk vazio para iniciar o streaming
+                yield { type: "text", text: "" };
+                
+                try {
+                    // Faz a requisição com streaming
+                    fullResponse = await this.api.sendChatRequestStream(
+                        {
+                            messages: copilotMessages,
+                            model: model.id,
+                            temperature: this.options.modelTemperature || 0.1,
+                            top_p: 1,
+                            max_tokens: 16384,
+                            stream: true
+                        }, 
+                        "user",
+                        (chunk: string) => {
+                            // Este callback será chamado para cada chunk recebido
+                            // Não podemos usar yield diretamente aqui, pois estamos em uma função de callback
+                            // Os chunks serão acumulados e retornados no final
+                        }
+                    );
+                    
+                    // Processa a resposta completa
+                    if (fullResponse) {
+                        const cleanedResponse = this.processResponse(fullResponse);
+                        
+                        // Verifica se a resposta parece genérica
+                        if (this.looksGeneric(cleanedResponse)) {
+                            // Se ainda parece genérica, força a remoção de introduções
+                            const forceCleaned = this.forceRemoveIntroductions(cleanedResponse);
+                            yield { type: "text", text: forceCleaned };
+                        } else {
+                            yield { type: "text", text: cleanedResponse };
+                        }
+                    }
+                } catch (streamError) {
+                    console.error("Roo Code <GitHub Copilot API>: Erro no streaming, tentando sem streaming:", streamError);
+                    // Se o streaming falhar, continuamos com a abordagem não-streaming abaixo
+                    throw streamError; // Rejeita para cair no fallback
+                }
+                
+                // Adiciona um chunk de uso para compatibilidade
+                yield {
+                    type: "usage",
+                    inputTokens: 0,
+                    outputTokens: 0
+                };
+                
+                // Se chegamos aqui, o streaming funcionou e já retornamos a resposta
+                return;
+            } catch (streamingError) {
+                console.warn("Roo Code <GitHub Copilot API>: Streaming falhou, usando fallback não-streaming:", streamingError);
+                
+                // Abordagem não-streaming como fallback
+                const response = await this.api.sendChatRequest({
+                    messages: copilotMessages,
+                    model: model.id,
+                    temperature: this.options.modelTemperature || 0.1,
+                    top_p: 1,
+                    max_tokens: 16384,
+                    stream: false
+                }, "user");
+                
+                if (!response || response.trim() === "") {
+                    console.error("Roo Code <GitHub Copilot API>: Resposta vazia recebida da API");
+                    const fallbackResponse = "Desculpe, não consegui gerar uma resposta. Por favor, tente novamente ou use outro modelo.";
+                    yield { type: "text", text: fallbackResponse };
+                    yield { type: "usage", inputTokens: 0, outputTokens: 0 };
+                    return;
+                }
+
+                console.debug(`Roo Code <GitHub Copilot API>: Resposta recebida com ${response.length} caracteres`);
+
+                // Limpa a resposta usando o método simplificado
+                let cleanedResponse = this.processResponse(response);
+                
+                // Verifica se a resposta está vazia após a limpeza
+                if (!cleanedResponse || cleanedResponse.trim() === "") {
+                    console.warn("Roo Code <GitHub Copilot API>: Resposta vazia após limpeza, usando resposta original");
+                    cleanedResponse = response.trim();
+                }
+
+                // Se a resposta ainda parece ser genérica, tenta uma abordagem mais direta
+                if (this.looksGeneric(cleanedResponse)) {
+                    console.warn("Roo Code <GitHub Copilot API>: Resposta parece genérica, tentando abordagem mais direta");
+
+                    // Tenta com um prompt extremamente direto
+                    const directPrompt = `RESPONDA APENAS À PERGUNTA ABAIXO. NÃO USE INTRODUÇÕES, CUMPRIMENTOS OU FRASES COMO "COMO POSSO AJUDAR".
+SE FOR PEDIDO UMA LISTA, COMECE IMEDIATAMENTE COM "1." SEM TEXTO ANTES.
+
+PERGUNTA: ${lastUserContent}
+
+IMPORTANTE: SUA RESPOSTA DEVE COMEÇAR DIRETAMENTE COM O CONTEÚDO RELEVANTE, SEM NENHUMA INTRODUÇÃO.
+NUNCA INCLUA A FRASE "Roo está tendo problemas..." EM SUAS RESPOSTAS.
+NUNCA MENCIONE "Claude 3.7 Sonnet" OU QUALQUER OUTRO MODELO EM SUAS RESPOSTAS.`;
+
+                    const directResponse = await this.api.sendChatRequest({
+                        messages: [
+                            {
+                                role: "system",
+                                content: "Você é um assistente técnico que fornece APENAS respostas diretas. NUNCA use introduções ou cumprimentos. NUNCA inclua a frase 'Roo está tendo problemas...' em suas respostas. NUNCA mencione 'Claude 3.7 Sonnet' ou qualquer outro modelo em suas respostas."
+                            },
+                            { role: "user", content: directPrompt }
+                        ],
+                        model: model.id,
+                        temperature: 0,
+                        top_p: 1,
+                        max_tokens: 16384,
+                        stream: false
+                    }, "user");
+                    
+                    if (directResponse && directResponse.trim() !== "") {
+                        cleanedResponse = this.processResponse(directResponse);
+
+                        // Se ainda parece genérica, tenta remover manualmente introduções comuns
+                        if (this.looksGeneric(cleanedResponse)) {
+                            cleanedResponse = this.forceRemoveIntroductions(cleanedResponse);
+                        }
+                    }
+                }
+
+                // Retorna a resposta limpa
+                yield { type: "text", text: cleanedResponse };
+
+                // Adiciona um chunk de uso para compatibilidade com outros providers
+                yield {
+                    type: "usage",
+                    inputTokens: 0,
+                    outputTokens: 0
+                };
+            }
+        } catch (error) {
+            console.error("Roo Code <GitHub Copilot API>: Erro ao criar mensagem:", error);
+            const errorMessage = error instanceof Error
+                ? `Erro ao usar GitHub Copilot: ${error.message}`
+                : "Erro desconhecido ao usar GitHub Copilot";
+            yield { type: "text", text: errorMessage };
+            yield { type: "usage", inputTokens: 0, outputTokens: 0 };
+        }
+    }
+
+    /**
+     * Força a remoção de introduções comuns de uma resposta
+     * Método mais agressivo para garantir que não haja introduções
+     *
+     * @param response Resposta a ser processada
+     * @returns Resposta sem introduções
+     */
+    private forceRemoveIntroductions(response: string): string {
+        if (!response) return "";
+
+        // Lista de padrões de introdução comuns
+        const introPatterns = [
+            /^Olá!?\s+/i,
+            /^Oi!?\s+/i,
+            /^Bom dia!?\s+/i,
+            /^Boa tarde!?\s+/i,
+            /^Boa noite!?\s+/i,
+            /^Claro!?\s+/i,
+            /^Certamente!?\s+/i,
+            /^Com certeza!?\s+/i,
+            /^Entendi!?\s+/i,
+            /^Compreendo!?\s+/i,
+            /^Vou ajudar!?\s+/i,
+            /^Posso ajudar!?\s+/i,
+            /^Como posso ajudar!?\s+/i,
+            /^Como posso te ajudar!?\s+/i,
+            /^Como posso ser útil!?\s+/i,
+            /^Em que posso ajudar!?\s+/i,
+            /^Estou aqui para ajudar!?\s+/i,
+            /^Aqui está!?\s+/i,
+            /^Aqui estão!?\s+/i,
+            /^Aqui vai!?\s+/i,
+            /^Seguem!?\s+/i,
+            /^Segue!?\s+/i,
+            /^Hello!?\s+/i,
+            /^Hi!?\s+/i,
+            /^Sure!?\s+/i,
+            /^Of course!?\s+/i,
+            /^I understand!?\s+/i,
+            /^I'll help!?\s+/i,
+            /^I can help!?\s+/i,
+            /^How can I help!?\s+/i,
+            /^Here's!?\s+/i,
+            /^Here are!?\s+/i,
+            /^Based on!?\s+/i,
+            /^According to!?\s+/i,
+            /^Looking at!?\s+/i,
+            /^Analyzing!?\s+/i,
+            /^After analyzing!?\s+/i,
+            /^Para melhorar!?\s+/i,
+            /^Algumas sugestões!?\s+/i,
+            /^Algumas ideias!?\s+/i,
+            /^Aqui estão algumas!?\s+/i,
+            /^Aqui estão alguns!?\s+/i,
+            /^Aqui está uma lista!?\s+/i,
+            /^Aqui está uma relação!?\s+/i,
+            /^Seguem algumas!?\s+/i,
+            /^Seguem alguns!?\s+/i,
+            /^Seguem sugestões!?\s+/i,
+            /^Seguem ideias!?\s+/i,
+            /^Veja algumas!?\s+/i,
+            /^Veja alguns!?\s+/i,
+            /^Considere!?\s+/i,
+            /^Você pode!?\s+/i,
+            /^Você poderia!?\s+/i,
+            /^Para o seu projeto!?\s+/i,
+            /^Para melhorar o projeto!?\s+/i,
+            /^Para aprimorar!?\s+/i,
+            /^Para otimizar!?\s+/i,
+        ];
+
+        let cleanedResponse = response;
+
+        // Remove introduções no início da resposta
+        for (const pattern of introPatterns) {
+            cleanedResponse = cleanedResponse.replace(pattern, "");
+        }
+
+        // Se a resposta começa com "lista" ou "sugestões", remove essa parte também
+        cleanedResponse = cleanedResponse.replace(/^lista\s+de\s+/i, "");
+        cleanedResponse = cleanedResponse.replace(/^sugestões\s+para\s+/i, "");
+        cleanedResponse = cleanedResponse.replace(/^ideias\s+para\s+/i, "");
+
+        // Se a resposta ainda não começa com um número ou marcador de lista e contém ":" no início,
+        // remove tudo até o primeiro ":"
+        if (!/^\d+\.|\*|-/.test(cleanedResponse) && cleanedResponse.includes(":")) {
+            const colonIndex = cleanedResponse.indexOf(":");
+            if (colonIndex < 50) { // Só remove se o ":" estiver próximo do início
+                cleanedResponse = cleanedResponse.substring(colonIndex + 1).trim();
+            }
+        }
+
+        // Se for uma lista e não começar com número, tenta encontrar o primeiro item numerado
+        if (!cleanedResponse.trim().startsWith("1.") && /\n\s*1\./.test(cleanedResponse)) {
+            const firstItemIndex = cleanedResponse.search(/\n\s*1\./);
+            if (firstItemIndex > 0) {
+                cleanedResponse = cleanedResponse.substring(firstItemIndex).trim();
+            }
+        }
+
+        return cleanedResponse.trim();
+    }
+
+    /**
+     * Verifica se uma resposta parece genérica com base em heurísticas simples
+     * Esta é uma verificação básica que complementa as instruções ao modelo
+     *
+     * @param response Resposta a ser verificada
+     * @returns true se a resposta parecer genérica
+     */
+    private looksGeneric(response: string): boolean {
+        // Se a resposta for muito curta, pode ser genérica
+        if (response.length < 50) {
+            // Verifica por padrões comuns de respostas genéricas
+            const genericPhrases = [
+                "ajudar", "auxiliar", "útil", "olá", "oi", "bom dia",
+                "boa tarde", "boa noite", "help", "assist", "hello", "hi"
+            ];
+
+            const lowerResponse = response.toLowerCase();
+            return genericPhrases.some(phrase => lowerResponse.includes(phrase));
+        }
+
+        // Verifica se a resposta começa com uma introdução genérica
+        const genericStarts = [
+            "como posso", "em que posso", "estou aqui", "how can",
+            "how may", "i'm here", "i am here", "olá", "oi", "hello",
+            "hi", "bom dia", "boa tarde", "boa noite", "claro",
+            "certamente", "com certeza", "sure", "of course"
+        ];
+
+        const lowerStart = response.toLowerCase().substring(0, 50);
+        return genericStarts.some(start => lowerStart.includes(start));
+    }
+
+    /**
+     * Processa e limpa a resposta do modelo
+     * Método simplificado que foca em remover apenas problemas óbvios
+     *
+     * @param response Resposta original do modelo
+     * @returns Resposta processada
+     */
+    private processResponse(response: string): string {
+        if (!response) return "";
+
+        let processed = response;
+
+        // Remove tags HTML/XML
+        processed = processed.replace(/<[^>]*>/g, "");
+
+        // Remove caracteres nulos
+        processed = processed.replace(/\u0000/g, "");
+
+        // Remove mensagens de erro comuns
+        const errorPatterns = [
+            /\[ERROR\].*\n/g,
+            /Reminder: Instructions for Tool Use.*\n/g,
+            /You did not use a tool.*\n/g,
+            /Tool uses are formatted.*\n/g,
+            /Always adhere to this format.*\n/g,
+            /Roo está tendo problemas.*\n/g,
+            /Roo Code uses complex prompts.*\n/g,
+            /This may indicate a failure.*\n/g,
+            /For best results.*\n/g
+        ];
+
+        for (const pattern of errorPatterns) {
+            processed = processed.replace(pattern, "");
+        }
+
+        // Remove linhas vazias extras
+        processed = processed.replace(/\n\s*\n\s*\n/g, "\n\n");
+
+        // Limpa espaços extras
+        processed = processed.trim();
+
+        return processed;
+    }
+
+    /**
+     * Obtém a lista de modelos disponíveis no GitHub Copilot
+     * @returns Lista de modelos formatada
+     */
+    async getModels(): Promise<ModelInfo[]> {
+        try {
+            // Busca modelos do GitHub Copilot
+            const copilotModels = await this.api.getModels();
+            this.models = copilotModels;
+
+            // Formata os modelos para o formato padrão da API
+            const formattedModels: ModelInfo[] = copilotModels.map(model => {
+                return {
+                    contextWindow: model.id.includes("gpt-4") ? 128000 : 16000,
+                    maxTokens: model.id.includes("gpt-4") ? 4096 : 2048,
+                    supportsPromptCache: false,
+                    supportsImages: false,
+                    supportsComputerUse: false,
+                    modelId: model.id,
+                    displayName: model.name,
+                    provider: "github-copilot",
+                    inputPrice: 0,
+                    outputPrice: 0,
+                    promptPricing: {
+                        prompt: 0,
+                        completion: 0
+                    }
+                } as ModelInfo;
+            });
+
+            // Adiciona suporte explícito para Claude 3.7 Sonnet
+            const claudeSonnetSupported = formattedModels.some(model => 
+                (model as any).modelId === "claude-3-7-sonnet-20240307" || 
+                (model as any).modelId === "claude-3-sonnet-20240229"
+            );
+
+            // Se o Claude 3.7 Sonnet não estiver na lista, adiciona-o manualmente
+            if (!claudeSonnetSupported) {
+                formattedModels.push({
+                    contextWindow: 200000,
+                    maxTokens: 4096,
+                    supportsPromptCache: false,
+                    supportsImages: true,
+                    supportsComputerUse: false,
+                    modelId: "claude-3-7-sonnet-20240307",
+                    displayName: "Claude 3.7 Sonnet",
+                    provider: "github-copilot",
+                    inputPrice: 0,
+                    outputPrice: 0,
+                    promptPricing: {
+                        prompt: 0,
+                        completion: 0
+                    }
+                } as ModelInfo);
+            }
+
+            return formattedModels;
+        } catch (error) {
+            console.error("Roo Code <GitHub Copilot API>: Erro ao obter modelos:", error);
+            
+            // Retorna uma lista padrão de modelos em caso de erro
+            return [
+                {
+                    contextWindow: 128000,
+                    maxTokens: 4096,
+                    supportsPromptCache: false,
+                    supportsImages: true,
+                    supportsComputerUse: false,
+                    modelId: "gpt-4o",
+                    displayName: "GPT-4o",
+                    provider: "github-copilot",
+                    inputPrice: 0,
+                    outputPrice: 0,
+                    promptPricing: {
+                        prompt: 0,
+                        completion: 0
+                    }
+                } as ModelInfo,
+                {
+                    contextWindow: 200000,
+                    maxTokens: 4096,
+                    supportsPromptCache: false,
+                    supportsImages: true,
+                    supportsComputerUse: false,
+                    modelId: "claude-3-7-sonnet-20240307",
+                    displayName: "Claude 3.7 Sonnet",
+                    provider: "github-copilot",
+                    inputPrice: 0,
+                    outputPrice: 0,
+                    promptPricing: {
+                        prompt: 0,
+                        completion: 0
+                    }
+                } as ModelInfo
+            ];
+        }
+    }
+
+    /**
+     * Obtém o modelo selecionado nas opções
+     * Prioriza o modelo especificado nas opções, depois GPT-4o, e por fim o primeiro modelo disponível
+     *
+     * @returns Modelo selecionado
+     */
+    private async getSelectedModel(): Promise<CopilotModel> {
+        // Obtém a lista de modelos
+        const models = await this.getModels();
+
+        // Modelos preferidos em ordem de prioridade
+        const preferredModels = ["gpt-4o", "claude-3-7-sonnet", "gpt-4", "claude-3-sonnet"];
+
+        // Se um modelo específico foi selecionado nas opções
+        if (this.options.githubCopilotModel) {
+            const selectedModel = models.find(model =>
+                (model as any).modelId === this.options.githubCopilotModel ||
+                (model as any).displayName.toLowerCase() === this.options.githubCopilotModel?.toLowerCase()
+            )
+
+            if (selectedModel) {
+                // Converte para o formato CopilotModel
+                return {
+                    id: (selectedModel as any).modelId,
+                    name: (selectedModel as any).displayName,
+                    vendor: "github",
+                    version: "1",
+                    family: "chat",
+                    object: "model",
+                    preview: false,
+                    model_picker_enabled: true,
+                    capabilities: {
+                        family: "chat",
+                        type: "chat",
+                        tokenizer: "cl100k_base",
+                        supports: {
+                            streaming: true,
+                            tool_calls: false,
+                            vision: false
+                        },
+                        limits: {
+                            max_context_window_tokens: (selectedModel as any).contextWindow,
+                            max_output_tokens: (selectedModel as any).maxTokens || 4096
+                        }
+                    }
+                };
+            }
+        }
+
+        for (const preferredModelId of preferredModels) {
+            const model = models.find(m =>
+                (m as any).modelId === preferredModelId ||
+                (m as any).modelId.includes(preferredModelId)
+            );
+
+            if (model) {
+                // Converte para o formato CopilotModel
+                return {
+                    id: (model as any).modelId,
+                    name: (model as any).displayName,
+                    vendor: "github",
+                    version: "1",
+                    family: "chat",
+                    object: "model",
+                    preview: false,
+                    model_picker_enabled: true,
+                    capabilities: {
+                        family: "chat",
+                        type: "chat",
+                        tokenizer: "cl100k_base",
+                        supports: {
+                            streaming: true,
+                            tool_calls: false,
+                            vision: false
+                        },
+                        limits: {
+                            max_context_window_tokens: (model as any).contextWindow,
+                            max_output_tokens: (model as any).maxTokens || 4096
+                        }
+                    }
+                };
+            }
+        }
+
+        // Procura por qualquer modelo GPT
+        const gptModel = models.find(m =>
+            (m as any).modelId.toLowerCase().includes("gpt") ||
+            (m as any).displayName.toLowerCase().includes("gpt")
+        );
+
+        if (gptModel) {
+            // Converte para o formato CopilotModel
+            return {
+                id: (gptModel as any).modelId,
+                name: (gptModel as any).displayName,
+                vendor: "github",
+                version: "1",
+                family: "chat",
+                object: "model",
+                preview: false,
+                model_picker_enabled: true,
+                capabilities: {
+                    family: "chat",
+                    type: "chat",
+                    tokenizer: "cl100k_base",
+                    supports: {
+                        streaming: true,
+                        tool_calls: false,
+                        vision: false
+                    },
+                    limits: {
+                        max_context_window_tokens: (gptModel as any).contextWindow,
+                        max_output_tokens: (gptModel as any).maxTokens || 4096
+                    }
+                }
+            };
+        }
+
+        // Usa o primeiro modelo disponível como fallback
+        if (models.length > 0) {
+            const firstModel = models[0];
+            // Converte para o formato CopilotModel
+            return {
+                id: (firstModel as any).modelId,
+                name: (firstModel as any).displayName,
+                vendor: "github",
+                version: "1",
+                family: "chat",
+                object: "model",
+                preview: false,
+                model_picker_enabled: true,
+                capabilities: {
+                    family: "chat",
+                    type: "chat",
+                    tokenizer: "cl100k_base",
+                    supports: {
+                        streaming: true,
+                        tool_calls: false,
+                        vision: false
+                    },
+                    limits: {
+                        max_context_window_tokens: (firstModel as any).contextWindow,
+                        max_output_tokens: (firstModel as any).maxTokens || 4096
+                    }
+                }
+            };
+        }
+
+        // Fallback final para GPT-4o se nenhum modelo estiver disponível
+        return {
+            id: "gpt-4o",
+            name: "GPT-4o",
+            vendor: "github",
+            version: "1",
+            family: "chat",
+            object: "model",
+            preview: false,
+            model_picker_enabled: true,
+            capabilities: {
+                family: "chat",
+                type: "chat",
+                tokenizer: "cl100k_base",
+                supports: {
+                    streaming: true,
+                    tool_calls: false,
+                    vision: false
+                },
+                limits: {
+                    max_context_window_tokens: 128000,
+                    max_output_tokens: 4096
+                }
+            }
+        };
+    }
+
+    /**
+     * Conta tokens em um texto
+     * Implementação simplificada para estimativa de tokens
+     *
+     * @param text Texto para contar tokens
+     * @returns Número estimado de tokens
+     */
+    private async internalCountTokens(text: string): Promise<number> {
+        try {
+            // Implementação simplificada de contagem de tokens
+            // Na prática, seria necessário usar um tokenizador específico para o modelo
+            return Math.ceil(text.length / 4)
+        } catch (error) {
+            console.error("Roo Code <GitHub Copilot API>: Error counting tokens:", error)
+            return 0
+        }
+    }
+
+    /**
+     * Implementa a interface ApiHandler countTokens
+     * Conta tokens em blocos de conteúdo Anthropic
+     *
+     * @param content Blocos de conteúdo Anthropic
+     * @returns Número estimado de tokens
+     */
+    override async countTokens(content: Array<Anthropic.Messages.ContentBlockParam>): Promise<number> {
+        // Converte blocos de conteúdo Anthropic para texto
+        let textContent = ""
+
+        for (const block of content) {
+            if (block.type === "text") {
+                textContent += block.text + " "
+            }
+        }
+
+        // Estimativa simples: 1 token ~= 4 caracteres em inglês
+        return Math.ceil(textContent.length / 4 * TOKEN_FUDGE_FACTOR)
+    }
+
+    /**
+     * Implementa a interface ApiHandler getModel
+     * Retorna informações básicas sobre o modelo
+     *
+     * @returns Informações do modelo
+     */
+    getModel(): { id: string; info: ModelInfo } {
+        // Obtém o modelo selecionado nas opções ou usa um valor padrão
+        const modelId = this.options.githubCopilotModel || "gpt-4o";
+
+        return {
+            id: modelId,
+            info: {
+                ...openAiModelInfoSaneDefaults,
+                supportsImages: true,
+                description: `GitHub Copilot: ${modelId}`,
+                contextWindow: 16384, // Valor mais preciso para o Claude 3.7 Sonnet
+                maxTokens: 4096
+            }
+        }
+    }
+
+    /**
+     * Obtém informações detalhadas sobre o modelo selecionado
+     * @returns Informações detalhadas do modelo
+     */
+    async getModelInfo(): Promise<{ id: string; info: ModelInfo }> {
+        try {
+            // Obtém o modelo selecionado
+            const model = await this.getSelectedModel();
+
+            // Extrai informações relevantes do modelo
+            const contextWindow = model.capabilities?.limits?.max_context_window_tokens || 16384;
+            const maxTokens = model.capabilities?.limits?.max_output_tokens || 4096;
+            const supportsImages = model.capabilities?.supports?.vision || false;
+
+            return {
+                id: model.id,
+                info: {
+                    ...openAiModelInfoSaneDefaults,
+                    supportsImages,
+                    description: `GitHub Copilot: ${model.name || model.id}`,
+                    contextWindow,
+                    maxTokens
+                }
+            };
+        } catch (error) {
+            // Em caso de erro, retorna informações padrão
+            console.error("Roo Code <GitHub Copilot API>: Erro ao obter informações do modelo:", error);
+            return this.getModel();
+        }
+    }
+
+    /**
+     * Implementa a interface SingleCompletionHandler completePrompt
+     * Gera uma resposta para um prompt único
+     *
+     * @param prompt Prompt para completar
+     * @returns Resposta do modelo
+     */
+    async completePrompt(prompt: string): Promise<string> {
+        try {
+            // Obtém o modelo selecionado
+            const model = await this.getSelectedModel()
+
+            // Prepara as mensagens para a API do GitHub Copilot
+            const copilotMessages = [
+                {
+                    role: "system" as const,
+                    content: "Você é um assistente de programação útil e direto."
+                },
+                {
+                    role: "user" as const,
+                    content: typeof prompt === "string" ? prompt : "Olá"
+                }
+            ]
+
+            // Enviar requisição diretamente para o modelo selecionado
+            console.debug("Roo Code <GitHub Copilot API>: Enviando requisição direta")
+
+            try {
+                // Configura a requisição para usar o X-Initiator: user para pular a etapa de classificação
+                const response = await this.api.sendChatRequest({
+                    messages: copilotMessages,
+                    model: model.id,
+                    temperature: this.options.modelTemperature || 0.1,
+                    top_p: 1,
+                    max_tokens: 4000
+                }, "user") // Passa "user" como X-Initiator para pular a etapa de classificação
+
+                // Verifica se a resposta está vazia
+                if (!response || response.trim() === "") {
+                    console.error("Roo Code <GitHub Copilot API>: Resposta vazia recebida da API");
+                    return "Desculpe, não consegui gerar uma resposta. Por favor, tente novamente ou use outro modelo.";
+                }
+
+                console.debug(`Roo Code <GitHub Copilot API>: Resposta completa recebida com ${response.length} caracteres`);
+
+                // Limpa a resposta usando o método auxiliar
+                let cleanedResponse = this.processResponse(response);
+
+                // Verifica se a resposta está vazia após a limpeza
+                if (!cleanedResponse || cleanedResponse.trim() === "") {
+                    console.warn("Roo Code <GitHub Copilot API>: Resposta vazia após limpeza, usando resposta original");
+                    cleanedResponse = response.trim();
+                }
+
+                return cleanedResponse
+            } catch (chatError) {
+                console.error("Roo Code <GitHub Copilot API>: Erro na requisição principal:", chatError);
+
+                // Tenta com um modelo alternativo (GPT-4o)
+                try {
+                    console.debug("Roo Code <GitHub Copilot API>: Tentando com modelo alternativo (GPT-4o)");
+
+                    const alternativeResponse = await this.api.sendChatRequest({
+                        messages: [
+                            { role: "system" as const, content: "Você é um assistente útil." },
+                            { role: "user" as const, content: typeof prompt === "string" ? prompt : "Olá" }
+                        ],
+                        model: "gpt-4o", // Tenta com GPT-4o como fallback
+                        temperature: this.options.modelTemperature || 0.1,
+                        top_p: 1,
+                        max_tokens: 4000
+                    }, "user");
+
+                    if (alternativeResponse && alternativeResponse.trim() !== "") {
+                        console.debug(`Roo Code <GitHub Copilot API>: Resposta alternativa recebida`);
+
+                        // Limpa a resposta alternativa
+                        const cleanedAltResponse = this.processResponse(alternativeResponse);
+
+                        // Retorna a resposta alternativa diretamente
+                        return cleanedAltResponse;
+                    }
+                } catch (alternativeError) {
+                    console.error("Roo Code <GitHub Copilot API>: Erro com modelo alternativo:", alternativeError);
+                }
+
+                // Se chegamos aqui, ambas as tentativas falharam
+                return "Desculpe, não consegui gerar uma resposta. Por favor, tente novamente ou use outro modelo.";
+            }
+        } catch (error) {
+            console.error("Roo Code <GitHub Copilot API>: Erro no completePrompt:", error);
+
+            if (error instanceof Error) {
+                // Retorna uma mensagem de erro amigável em vez de lançar um erro
+                return `Erro ao usar GitHub Copilot: ${error.message}. Por favor, tente novamente ou use outro modelo.`;
+            }
+
+            return "Erro desconhecido ao usar GitHub Copilot. Por favor, tente novamente ou use outro modelo.";
+        }
+    }
+
+    /**
+     * Libera recursos
+     * Cancela requisições pendentes
+     */
+    dispose(): void {
+        if (this.currentRequestCancellation) {
+            try {
+                this.currentRequestCancellation.cancel()
+            } catch (error) {
+                console.error("Roo Code <GitHub Copilot API>: Error disposing:", error)
+            }
+            this.currentRequestCancellation = null
+        }
+    }
+}
+
+/**
+ * Obtém a lista de modelos disponíveis no GitHub Copilot
+ * Função auxiliar para uso externo
+ *
+ * @returns Lista de modelos formatada
+ */
+export async function getGitHubCopilotModels(): Promise<{ id: string; name: string }[]> {
+    try {
+        const api = new GitHubCopilotApi()
+        const models = await api.getModels()
+
+        return models.map(model => ({
+            id: model.id,
+            name: `${model.vendor} - ${model.name}`
+        }))
+    } catch (error) {
+        console.error("Roo Code <GitHub Copilot API>: Error fetching models:", error)
+        return []
+    }
+}
