@@ -147,6 +147,7 @@ export type ExtensionState = Pick<
 	| "remoteBrowserHost"
 	// | "enableCheckpoints" // Optional in GlobalSettings, required here.
 	// | "checkpointStorage" // Optional in GlobalSettings, required here.
+	| "showGreeting"
 	| "ttsEnabled"
 	| "ttsSpeed"
 	| "soundEnabled"
@@ -157,6 +158,12 @@ export type ExtensionState = Pick<
 	// | "maxReadFileLine" // Optional in GlobalSettings, required here.
 	| "terminalOutputLineLimit"
 	| "terminalShellIntegrationTimeout"
+	| "terminalCommandDelay"
+	| "terminalPowershellCounter"
+	| "terminalZshClearEolMark"
+	| "terminalZshOhMy"
+	| "terminalZshP10k"
+	| "terminalZdotdir"
 	| "diffEnabled"
 	| "fuzzyMatchThreshold"
 	// | "experiments" // Optional in GlobalSettings, required here.
