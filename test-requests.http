@@ -1,0 +1,290 @@
+# GitHub Copilot API Test Requests
+#
+# Este arquivo contém requisições HTTP para testar a API do GitHub Copilot.
+# Para executar as requisições, você precisa de um token de acesso pessoal do GitHub.
+# As requisições devem ser executadas na ordem em que aparecem neste arquivo.
+#
+# 1. Obter token do Copilot
+# 2. Obter informações do usuário
+# 3. Fazer requisições para a API do Copilot
+# 4. Fluxo de duas etapas do GitHub Copilot com Claude 3.7 Sonnet
+#
+# Como usar este arquivo:
+# 1. Instale a extensão "REST Client" no VS Code (https://marketplace.visualstudio.com/items?itemName=humao.rest-client)
+# 2. Abra este arquivo no VS Code
+# 3. Clique em "Send Request" acima de cada requisição para executá-la
+# 4. Os resultados serão exibidos em uma nova aba
+
+### Configurações Globais
+@baseUrl = https://api.github.com
+@copilotBaseUrl = https://api.individual.githubcopilot.com
+@githubToken = {{$dotenv GITHUB_TOKEN}}
+@editorVersion = {{$dotenv EDITOR_VERSION || 'vscode/1.99.0'}}
+@pluginVersion = {{$dotenv PLUGIN_VERSION || 'copilot-chat/0.26.0'}}
+@userAgent = {{$dotenv USER_AGENT || 'GitHubCopilotChat/0.26.0'}}
+
+### 1. Gerar token do Copilot
+# @name getToken
+# Esta requisição obtém um token de acesso para a API do GitHub Copilot
+GET {{baseUrl}}/copilot_internal/v2/token
+Host: api.github.com
+Connection: keep-alive
+Authorization: token {{githubToken}}
+X-GitHub-Api-Version: 2025-04-01
+Editor-Version: {{editorVersion}}
+Editor-Plugin-Version: {{pluginVersion}}
+User-Agent: {{userAgent}}
+X-VSCode-User-Agent-Library-Version: node-fetch
+Accept: */*
+Accept-Language: *
+Sec-Fetch-Mode: cors
+Accept-Encoding: br, gzip, deflate
+
+# Exemplo de resposta:
+# {
+#   "annotations_enabled": true,
+#   "chat_enabled": true,
+#   "endpoints": {
+#     "api": "https://api.individual.githubcopilot.com"
+#   },
+#   "expires_at": 1744038133,
+#   "token": "tid=b1edf868bc603ad7757939856ade7513;exp=1744038133;sku=free_educational;proxy-ep=proxy.individual.githubcopilot.com"
+# }
+
+### Definir token para as próximas requisições
+# IMPORTANTE: Após executar a primeira requisição, copie o valor do token da resposta
+# e substitua na linha abaixo. Isso é necessário porque a extração automática pode não funcionar
+# em todos os ambientes.
+
+# Substitua pelo token obtido na resposta da primeira requisição
+#@copilotToken = tid=seu_token_aqui
+
+# Alternativa: tente a extração automática (pode não funcionar em todos os ambientes)
+@copilotToken = {{getToken.response.body.$.token}}
+
+### 2. Obter informações do usuário
+# @name getUser
+# Esta requisição obtém informações do usuário autenticado
+GET {{baseUrl}}/user
+Host: api.github.com
+Connection: keep-alive
+Accept: application/vnd.github+json
+X-GitHub-Api-Version: 2022-11-28
+Authorization: Bearer {{githubToken}}
+User-Agent: {{userAgent}}
+X-VSCode-User-Agent-Library-Version: node-fetch
+Accept-Language: *
+Sec-Fetch-Mode: cors
+Accept-Encoding: br, gzip, deflate
+
+### 3. Chat Completions
+# @name chatCompletions
+# Esta requisição envia uma mensagem para a API do Copilot e recebe uma resposta completa
+POST {{copilotBaseUrl}}/chat/completions
+Host: api.individual.githubcopilot.com
+Connection: keep-alive
+Authorization: Bearer {{copilotToken}}
+X-Request-Id: b9cb7ade-66ca-4009-8ae4-a60d9f56c905
+X-Interaction-Type: conversation-panel
+OpenAI-Intent: conversation-panel
+X-GitHub-Api-Version: 2025-04-01
+Copilot-Integration-Id: vscode-chat
+VScode-SessionId: 42b750ee-d673-4588-9ba0-dff6f48aa97c1744035014252
+VScode-MachineId: 9d882994dfb128d6db529e237738329a935f2cba4f28cad522e9ba531df91c9b
+X-Interaction-Id: 78b7db95-a254-4f21-9f32-1c06ca25cdee
+X-Initiator: agent
+Editor-Version: {{editorVersion}}
+Editor-Plugin-Version: {{pluginVersion}}
+User-Agent: {{userAgent}}
+X-VSCode-User-Agent-Library-Version: node-fetch
+Content-Type: application/json
+Accept: */*
+Accept-Language: *
+Sec-Fetch-Mode: cors
+Accept-Encoding: br, gzip, deflate
+
+{
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful AI programming assistant."
+    },
+    {
+      "role": "user",
+      "content": "Olá, tudo bem?"
+    }
+  ],
+  "model": "gpt-4o-mini",
+  "temperature": 0.1,
+  "top_p": 1,
+  "max_tokens": 4096,
+  "n": 1,
+  "stream": false
+}
+
+### 4. Chat Completions (Stream)
+# @name chatCompletionsStream
+# Esta requisição envia uma mensagem para a API do Copilot e recebe a resposta em formato de stream
+POST {{copilotBaseUrl}}/chat/completions
+Host: api.individual.githubcopilot.com
+Connection: keep-alive
+Authorization: Bearer {{copilotToken}}
+X-Request-Id: {{$guid}}
+X-Interaction-Type: conversation-panel
+OpenAI-Intent: conversation-panel
+X-GitHub-Api-Version: 2025-04-01
+Copilot-Integration-Id: vscode-chat
+Editor-Version: {{editorVersion}}
+Editor-Plugin-Version: {{pluginVersion}}
+User-Agent: {{userAgent}}
+X-VSCode-User-Agent-Library-Version: node-fetch
+Content-Type: application/json
+Accept: */*
+Accept-Language: *
+Sec-Fetch-Mode: cors
+Accept-Encoding: br, gzip, deflate
+
+{
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful AI programming assistant."
+    },
+    {
+      "role": "user",
+      "content": "Olá, tudo bem?"
+    }
+  ],
+  "model": "gpt-4o-mini",
+  "temperature": 0.1,
+  "top_p": 1,
+  "max_tokens": 4096,
+  "n": 1,
+  "stream": true
+}
+
+### 5. Fluxo de duas etapas do GitHub Copilot com Claude 3.7 Sonnet
+# O GitHub Copilot usa um fluxo de duas etapas para interagir com o Claude 3.7 Sonnet:
+# 1. Primeira etapa: Classificação da consulta usando gpt-4o-mini
+# 2. Segunda etapa: Resposta principal usando claude-3.7-sonnet-thought
+#
+# Detalhes do fluxo:
+# - Na primeira etapa, o GitHub Copilot envia a consulta do usuário para o modelo gpt-4o-mini
+#   para classificar o tipo de pergunta (ex: "unknown", "workspace_project_questions", etc.)
+# - Na segunda etapa, o GitHub Copilot envia a consulta do usuário para o modelo claude-3.7-sonnet-thought
+#   para gerar a resposta completa
+# - Ambas as etapas usam o mesmo token de autenticação, mas com cabeçalhos ligeiramente diferentes
+# - A segunda etapa usa X-Initiator: user, enquanto a primeira usa X-Initiator: agent
+# - A segunda etapa envolve a consulta do usuário em tags <prompt>...</prompt>
+#
+# Este fluxo de duas etapas é essencial para o funcionamento do Claude 3.7 Sonnet no VS Code Copilot.
+# O VS Code LM API não implementa este fluxo completo, o que pode explicar por que o Claude 3.7 Sonnet
+# não funciona diretamente através da API do VS Code LM.
+
+### 5.1 Primeira etapa: Classificação da consulta
+# @name classifyQuery
+# Esta requisição classifica a consulta do usuário usando gpt-4o-mini
+POST {{copilotBaseUrl}}/chat/completions
+Host: api.individual.githubcopilot.com
+Connection: keep-alive
+Authorization: Bearer {{copilotToken}}
+X-Request-Id: {{$guid}}
+X-Interaction-Type: conversation-panel
+OpenAI-Intent: conversation-panel
+X-GitHub-Api-Version: 2025-04-01
+Copilot-Integration-Id: vscode-chat
+VScode-SessionId: 42b750ee-d673-4588-9ba0-dff6f48aa97c1744035014252
+VScode-MachineId: 9d882994dfb128d6db529e237738329a935f2cba4f28cad522e9ba531df91c9b
+X-Interaction-Id: {{$guid}}
+X-Initiator: agent
+Editor-Version: {{editorVersion}}
+Editor-Plugin-Version: {{pluginVersion}}
+User-Agent: {{userAgent}}
+X-VSCode-User-Agent-Library-Version: node-fetch
+Content-Type: application/json
+Accept: */*
+Accept-Language: *
+Sec-Fetch-Mode: cors
+Accept-Encoding: br, gzip, deflate
+
+{
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful AI programming assistant to a user who is a software engineer, acting on behalf of the Visual Studio Code editor. Your task is to choose one category from the Markdown table of categories below that matches the user's question. Carefully review the user's question, any previous messages, and any provided context such as code snippets. Respond with just the category name. Your chosen category will help Visual Studio Code provide the user with a higher-quality response, and choosing incorrectly will degrade the user's experience of using Visual Studio Code, so you must choose wisely. If you cannot choose just one category, or if none of the categories seem like they would provide the user with a better result, you must always respond with \"unknown\".\n\n| Category name | Category description | Example of matching question |\n| -- | -- | -- |\n| generate_code_sample | The user wants to generate code snippets without referencing the contents of the current workspace. This category does not include generating entire projects. | \"Write an example of computing a SHA256 hash.\" |\n| add_feature_to_file | The user wants to change code in a file that is provided in their request, without referencing the contents of the current workspace. This category does not include generating entire projects. | \"Add a refresh button to the table widget.\" |\n| question_about_specific_files | The user has a question about a specific file or code snippet that they have provided as part of their query, and the question does not require additional workspace context to answer. | \"What does this file do?\" |\n| workspace_project_questions | The user wants to learn about or update the code or files in their current workspace. Questions in this category may be about understanding what the whole workspace does or locating the implementation of some code. This does not include generating or updating tests. | \"What does this project do?\" |\n| find_code_in_workspace | The user wants to locate the implementation of some functionality in their current workspace. | \"Where is the tree widget implemented?\" |\n| generate_with_workspace_context | The user wants to generate code based on multiple files in the workspace and did not specify which files to reference. | \"Create a README for this project.\" |\n| create_tests | The user wants to generate unit tests. | \"Generate tests for my selection using pytest.\" |\n| create_new_workspace_or_extension | The user wants to create a complete Visual Studio Code workspace from scratch, such as a new application or a Visual Studio Code extension. Use this category only if the question relates to generating or creating new workspaces in Visual Studio Code. Do not use this category for updating existing code or generating sample code snippets | \"Scaffold a Node server.\", \"Create a sample project which uses the fileSystemProvider API.\", \"react application\" |\n| create_jupyter_notebook | The user wants to create a new Jupyter notebook in Visual Studio Code. | \"Create a notebook to analyze this CSV file.\" |\n| set_up_tests | The user wants to configure project test setup, framework, or test runner. The user does not want to fix their existing tests. | \"Set up tests for this project.\" |\n| vscode_configuration_questions | The user wants to learn about, use, or configure the Visual Studio Code. Use this category if the users question is specifically about commands, settings, keybindings, extensions and other features available in Visual Studio Code. Do not use this category to answer questions about generating code or creating new projects including Visual Studio Code extensions. | \"Switch to light mode.\", \"Keyboard shortcut to toggle terminal visibility.\", \"Settings to enable minimap.\", \"Whats new in the latest release?\" |\n| configure_python_environment | The user wants to set up their Python environment. | \"Create a virtual environment for my project.\" |\n| terminal_state_questions | The user wants to learn about specific state such as the selection, command, or failed command in the integrated terminal in Visual Studio Code. | \"Why did the latest terminal command fail?\" |\n| github_questions | The user is asking about an issue, pull request, branch, commit hash, diff, discussion, repository, or published release on GitHub.com.  This category does not include performing local Git operations using the CLI. | \"What has been changed in the pull request 1361 in browserify/browserify repo?\" |\n| web_questions | The user is asking a question that requires current knowledge from a web search engine. Such questions often reference time periods that exceed your knowledge cutoff. | \"What is the latest LTS version of Node.js?\" |\n| unknown | The user's question does not fit exactly one of the categories above, is about a product other than Visual Studio Code or GitHub, or is a general question about code, code errors, or software engineering. | \"How do I center a div in CSS?\" |"
+    },
+    {
+      "role": "user",
+      "content": "Oi tudo bem"
+    }
+  ],
+  "model": "gpt-4o-mini",
+  "temperature": 0.1,
+  "top_p": 1,
+  "max_tokens": 4096,
+  "stop": [";"],
+  "n": 1,
+  "stream": true
+}
+
+### 5.2 Segunda etapa: Resposta principal com Claude 3.7 Sonnet
+# @name claudeResponse
+# Esta requisição usa o claude-3.7-sonnet-thought para gerar a resposta principal
+POST {{copilotBaseUrl}}/chat/completions
+Host: api.individual.githubcopilot.com
+Connection: keep-alive
+Authorization: Bearer {{copilotToken}}
+X-Request-Id: {{$guid}}
+X-Interaction-Type: conversation-panel
+OpenAI-Intent: conversation-panel
+X-GitHub-Api-Version: 2025-04-01
+Copilot-Integration-Id: vscode-chat
+VScode-SessionId: 7dbc5f02-03f7-4a7d-9bc8-f7918983e5b61744050685671
+VScode-MachineId: 9d882994dfb128d6db529e237738329a935f2cba4f28cad522e9ba531df91c9b
+X-Interaction-Id: {{$guid}}
+X-Initiator: user
+Editor-Version: {{editorVersion}}
+Editor-Plugin-Version: {{pluginVersion}}
+User-Agent: {{userAgent}}
+X-VSCode-User-Agent-Library-Version: node-fetch
+Content-Type: application/json
+Accept: */*
+Accept-Language: *
+Sec-Fetch-Mode: cors
+Accept-Encoding: br, gzip, deflate
+
+{
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an AI programming assistant.\nWhen asked for your name, you must respond with \"GitHub Copilot\".\nFollow the user's requirements carefully & to the letter.\nFollow Microsoft content policies.\nAvoid content that violates copyrights.\nIf you are asked to generate content that is harmful, hateful, racist, sexist, lewd, violent, or completely irrelevant to software engineering, only respond with \"Sorry, I can't assist with that.\"\nKeep your answers short and impersonal.\nYou can answer general programming questions and perform the following tasks: \n* Faça uma pergunta sobre os arquivos em seu workspace atual\n* Explique como funciona o código no seu editor ativo\n* Fazer alterações no código existente\n* Examinar o código selecionado em seu editor ativo\n* Gerar testes de unidade para o código selecionado\n* Propor uma correção para os problemas no código selecionado\n* Código de scaffold para um novo arquivo ou projeto em um espaço de trabalho\n* Criar um novo Jupyter Notebook\n* Faça perguntas sobre o VS Code\n* Gerar parâmetros de consulta para pesquisa do workspace\n* Perguntar como fazer algo no terminal\n* Explique o que aconteceu no terminal\n* Propor uma correção para os problemas no código selecionado\n* Explique como funciona o código no seu editor ativo\n* Examinar o código selecionado em seu editor ativo\n* Gerar testes de unidade para o código selecionado\n* Fazer alterações no código existente\nYou use the Claude 3.7 Sonnet Thinking large language model.\nThe user has the following folder open: /home/alex/projetos/Roo-Code.\nThe current date is April 7, 2025.\nUse Markdown formatting in your answers.\nWhen suggesting code changes or new content, use Markdown code blocks.\nTo start a code block, use 4 backticks.\nAfter the backticks, add the programming language name.\nIf the code modifies an existing file or should be placed at a specific location, add a line comment with 'filepath:' and the file path.\nIf you want the user to decide where to place the code, do not add the file path comment.\nIn the code block, use a line comment with '...existing code...' to indicate code that is already present in the file.\n````languageId\n// filepath: /path/to/file\n// ...existing code...\n{ changed code }\n// ...existing code...\n{ changed code }\n// ...existing code...\n````For code blocks use four backticks to start and end.\nAvoid wrapping the whole response in triple backticks.\nThe user works in an IDE called Visual Studio Code which has a concept for editors with open files, integrated unit test support, an output pane that shows the output of running the code as well as an integrated terminal.\nThe user is working on a Linux machine. Please respond with system specific commands if applicable.\nThe active document is the source code the user is looking at right now.\nYou can only give one reply for each conversation turn.\nRespond in the following locale: pt-br"
+    },
+    {
+      "role": "user",
+      "content": "<prompt>\nOi tudo bem\n</prompt>"
+    }
+  ],
+  "model": "claude-3.7-sonnet-thought",
+  "temperature": 0.1,
+  "top_p": 1,
+  "max_tokens": 16384,
+  "n": 1,
+  "stream": true
+}
+
+# Notas de uso:
+# 1. Configure seu token do GitHub no arquivo .env (copie de .env.example)
+# 2. Execute a primeira requisição (1. Gerar token do Copilot)
+# 3. Copie o valor do token da resposta (campo "token")
+# 4. Substitua o valor da variável @copilotToken pelo token copiado
+# 5. Execute as demais requisições na ordem
+# 6. Para gerar um novo GUID para o X-Request-Id, use {{$guid}} como no exemplo acima
+#
+# Variáveis utilizadas:
+# - @baseUrl: URL base da API do GitHub
+# - @copilotBaseUrl: URL base da API do Copilot
+# - @githubToken: Token de acesso pessoal do GitHub (do arquivo .env)
+# - @editorVersion: Versão do editor
+# - @pluginVersion: Versão do plugin
+# - @userAgent: User-Agent para as requisições
+# - @copilotToken: Token do Copilot obtido na primeira requisição

@@ -183,11 +183,9 @@ type ProviderSettings = {
 	githubCopilotModel?: string | undefined
 	githubCopilotBaseUrl?: string | undefined
 	githubBaseUrl?: string | undefined
-	modelTemperature?: (number | null) | undefined
 	modelMaxTokens?: number | undefined
 	modelMaxThinkingTokens?: number | undefined
 	includeMaxTokens?: boolean | undefined
-	modelTemperature?: (number | null) | undefined
 	reasoningEffort?: ("low" | "medium" | "high") | undefined
 	rateLimitSeconds?: number | undefined
 	fakeAi?: unknown | undefined

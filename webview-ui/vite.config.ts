@@ -41,6 +41,7 @@ export default defineConfig({
 		outDir: "build",
 		reportCompressedSize: false,
 		rollupOptions: {
+			// Removido a lista de externos para permitir que o Vite inclua os módulos Radix UI no bundle
 			output: {
 				entryFileNames: `assets/[name].js`,
 				chunkFileNames: `assets/[name].js`,

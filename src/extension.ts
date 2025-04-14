@@ -23,6 +23,9 @@ import { telemetryService } from "./services/telemetry/TelemetryService"
 import { TerminalRegistry } from "./integrations/terminal/TerminalRegistry"
 import { API } from "./exports/api"
 import { migrateSettings } from "./utils/migrateSettings"
+import { SemanticProcessingManager } from "./core/semantic-processing"
+import { ClineSemanticIntegration } from "./core/semantic-processing/integration/ClineSemanticIntegration"
+import { registerSemanticCommands } from "./core/semantic-processing/commands"
 
 import { handleUri, registerCommands, registerCodeActions, registerTerminalActions } from "./activate"
 import { formatLanguage } from "./shared/language"
@@ -35,8 +38,9 @@ import { formatLanguage } from "./shared/language"
  *  - https://github.com/microsoft/vscode-webview-ui-toolkit-samples/tree/main/frameworks/hello-world-react-cra
  */
 
-let outputChannel: vscode.OutputChannel
+export let outputChannel: vscode.OutputChannel
 let extensionContext: vscode.ExtensionContext
+export let semanticProcessingManager: SemanticProcessingManager
 
 // This method is called when your extension is activated.
 // Your extension is activated the very first time the command is executed.
@@ -58,6 +62,18 @@ export async function activate(context: vscode.ExtensionContext) {
 	// Initialize terminal shell execution handlers.
 	TerminalRegistry.initialize()
 
+	// Initialize semantic processing manager
+	semanticProcessingManager = new SemanticProcessingManager(context)
+
+	// Listen for semantic processing events
+	semanticProcessingManager.on('validation:alert', (alert) => {
+		outputChannel.appendLine(`Semantic Processing Alert: ${alert.message}`)
+	})
+
+	// Initialize semantic integration
+	const semanticIntegration = ClineSemanticIntegration.getInstance(semanticProcessingManager)
+	outputChannel.appendLine("Semantic integration initialized")
+
 	// Get default commands from configuration.
 	const defaultCommands = vscode.workspace.getConfiguration("roo-cline").get<string[]>("allowedCommands") || []
 
@@ -68,6 +84,18 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	const provider = new ClineProvider(context, outputChannel, "sidebar")
 	telemetryService.setProvider(provider)
+
+	// Configurar evento para integrar o sistema de processamento semântico com o Cline
+	provider.on('clineCreated', (cline) => {
+		try {
+			// Integrar o sistema de processamento semântico com o Cline
+			const semanticIntegration = ClineSemanticIntegration.getInstance()
+			semanticIntegration.integrateCline(cline)
+			outputChannel.appendLine(`Semantic integration configured for Cline ${cline.taskId}`)
+		} catch (error) {
+			outputChannel.appendLine(`Error integrating semantic processing with Cline: ${error}`)
+		}
+	})
 
 	context.subscriptions.push(
 		vscode.window.registerWebviewViewProvider(ClineProvider.sideBarId, provider, {
@@ -115,6 +143,9 @@ export async function activate(context: vscode.ExtensionContext) {
 	registerCodeActions(context)
 	registerTerminalActions(context)
 
+	// Registrar comandos do sistema de processamento semântico
+	await registerSemanticCommands(context, semanticProcessingManager);
+
 	// Allows other extensions to activate once Roo is ready.
 	vscode.commands.executeCommand("roo-cline.activationCompleted")
 
@@ -133,4 +164,7 @@ export async function deactivate() {
 
 	// Clean up terminal handlers
 	TerminalRegistry.cleanup()
+
+	// Clean up semantic processing manager
+	await semanticProcessingManager.dispose()
 }

@@ -59,6 +59,10 @@
 			{
 				"id": "roo-code.terminalMenu",
 				"label": "%views.terminalMenu.label%"
+			},
+			{
+				"id": "roo-code.semanticMenu",
+				"label": "Roo Code Semântico"
 			}
 		],
 		"viewsContainers": {
@@ -146,6 +150,31 @@
 				"category": "%extension.displayName%"
 			},
 			{
+				"command": "roo-code.analyzeCurrentFile",
+				"title": "Analisar Arquivo Atual",
+				"category": "Roo Code Semântico"
+			},
+			{
+				"command": "roo-code.viewDependencyGraph",
+				"title": "Visualizar Grafo de Dependências",
+				"category": "Roo Code Semântico"
+			},
+			{
+				"command": "roo-code.generateSuggestions",
+				"title": "Gerar Sugestões Contextualizadas",
+				"category": "Roo Code Semântico"
+			},
+			{
+				"command": "roo-code.generateValidationReport",
+				"title": "Gerar Relatório de Validação",
+				"category": "Roo Code Semântico"
+			},
+			{
+				"command": "roo-code.showRelatedFiles",
+				"title": "Mostrar Arquivos Relacionados",
+				"category": "Roo Code Semântico"
+			},
+			{
 				"command": "roo-cline.terminalAddToContext",
 				"title": "%command.terminal.addToContext.title%",
 				"category": "Terminal"
@@ -183,6 +212,10 @@
 		],
 		"menus": {
 			"editor/context": [
+				{
+					"submenu": "roo-code.semanticMenu",
+					"group": "navigation"
+				},
 				{
 					"submenu": "roo-code.contextMenu",
 					"group": "navigation"
@@ -232,6 +265,28 @@
 				{
 					"command": "roo-cline.terminalExplainCommandInCurrentTask",
 					"group": "1_actions@6"
+				}
+			],
+			"roo-code.semanticMenu": [
+				{
+					"command": "roo-code.analyzeCurrentFile",
+					"group": "1_semantic@1"
+				},
+				{
+					"command": "roo-code.viewDependencyGraph",
+					"group": "1_semantic@2"
+				},
+				{
+					"command": "roo-code.generateSuggestions",
+					"group": "1_semantic@3"
+				},
+				{
+					"command": "roo-code.generateValidationReport",
+					"group": "1_semantic@4"
+				},
+				{
+					"command": "roo-code.showRelatedFiles",
+					"group": "1_semantic@5"
 				}
 			],
 			"view/title": [
