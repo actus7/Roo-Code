@@ -1,5 +1,250 @@
 # Roo Code Changelog
 
+## [3.16.5] - 2025-05-10
+
+- Revert profile management changes until we track down a bug with defaults
+
+## [3.16.4] - 2025-05-09
+
+- Improve provider profile management in the external API
+- Enforce provider selection in OpenRouter by using 'only' parameter and disabling fallbacks (thanks @shariqriazz!)
+- Fix display issues with long profile names (thanks @cannuri!)
+- Prevent terminal focus theft on paste after command execution (thanks @MuriloFP!)
+- Save OpenAI compatible custom headers correctly
+- Fix race condition when updating prompts (thanks @elianiva!)
+- Fix display issues in high contrast themes (thanks @zhangtony239!)
+- Fix not being able to use specific providers on Openrouter (thanks @daniel-lxs!)
+- Show properly formatted multi-line commands in preview (thanks @KJ7LNW!)
+- Handle unsupported language errors gracefully in read_file tool (thanks @KJ7LNW!)
+- Enhance focus styles in select-dropdown and fix docs URL (thanks @zhangtony239!)
+- Properly handle mode name overflow in UI (thanks @elianiva!)
+- Fix project MCP always allow issue (thanks @aheizi!)
+
+## [3.16.3] - 2025-05-08
+
+- Revert Tailwind migration while we fix a few spots
+- Add Elixir file extension support in language parser (thanks @pfitz!)
+
+## [3.16.2] - 2025-05-07
+
+- Clarify XML tool use formatting instructions
+- Error handling code cleanup (thanks @monkeyDluffy6017!)
+
+## [3.16.1] - 2025-05-07
+
+- Add LiteLLM provider support
+- Improve stability by detecting and preventing tool loops
+- Add Dutch localization (thanks @Githubguy132010!)
+- Add editor name to telemetry for better analytics
+- Migrate to Tailwind CSS for improved UI consistency
+- Fix footer button wrapping in About section on narrow screens (thanks @ecmasx!)
+- Update evals defaults
+- Update dependencies to latest versions
+
+## [3.16.0] - 2025-05-06
+
+- Add vertical tab navigation to the settings (thanks @dlab-anton)
+- Add Groq and Chutes API providers (thanks @shariqriazz)
+- Clickable code references in code block (thanks @KJ7LNW)
+- Improve accessibility of ato-approve toggles (thanks @Deon588)
+- Requesty provider fixes (thanks @dtrugman)
+- Fix migration and persistence of per-mode API profiles (thanks @alasano)
+- Fix usage of `path.basename` in the extension webview (thanks @samhvw8)
+- Fix display issue of the programming language dropdown in the code block component (thanks @zhangtony239)
+- MCP server errors are now captured and shown in a new "Errors" tab (thanks @robertheadley)
+- Error logging will no longer break MCP functionality if the server is properly connected (thanks @ksze)
+- You can now toggle the `terminal.integrated.inheritEnv` VSCode setting directly for the Roo Code settings (thanks @KJ7LNW)
+- Add `gemini-2.5-pro-preview-05-06` to the Vertex and Gemini providers (thanks @zetaloop)
+- Ensure evals exercises are up-to-date before running evals (thanks @shariqriazz)
+- Lots of general UI improvements (thanks @elianiva)
+- Organize provider settings into separate components
+- Improved icons and translations for the code block component
+- Add support for tests that use ESM libraries
+- Move environment detail generation to a separate module
+- Enable prompt caching by default for supported Gemini models
+
+## [3.15.5] - 2025-05-05
+
+- Update @google/genai to 0.12 (includes some streaming completion bug fixes)
+- Rendering performance improvements for code blocks in chat (thanks @KJ7LNW)
+
+## [3.15.4] - 2025-05-04
+
+- Fix a nasty bug that would cause Roo Code to hang, particularly in orchestrator mode
+- Improve Gemini caching efficiency
+
+## [3.15.3] - 2025-05-02
+
+- Terminal: Fix empty command bug
+- Terminal: More robust process killing
+- Optimize Gemini prompt caching for OpenRouter
+- Chat view performance improvements
+
+## [3.15.2] - 2025-05-02
+
+- Fix terminal performance issues
+- Handle Mermaid validation errors
+- Add customizable headers for OpenAI-compatible provider (thanks @mark-bradshaw!)
+- Add config option to overwrite OpenAI's API base (thanks @GOODBOY008!)
+- Fixes to padding and height issues when resizing the sidebar (thanks @zhangtony239!)
+- Remove tool groups from orchestrator mode definition
+- Add telemetry for title button clicks
+
+## [3.15.1] - 2025-04-30
+
+- Capture stderr in execa-spawned processes
+- Play sound only when action needed from the user (thanks @olearycrew)
+- Make retries respect the global auto approve checkbox
+- Fix a selection mode bug in the history view (thanks @jr)
+
+## [3.15.0] - 2025-04-30
+
+- Add prompt caching to the Google Vertex provider (thanks @ashktn)
+- Add a fallback mechanism for executing terminal commands if VSCode terminal shell integration fails
+- Improve the UI/UX of code snippets in the chat (thanks @KJ7LNW)
+- Add a reasoning effort setting for the OpenAI Compatible provider (thanks @mr-ryan-james)
+- Allow terminal commands to be stopped directly from the chat UI
+- Adjust chat view padding to accommodate small width layouts (thanks @zhangtony239)
+- Fix file mentions for filenames containing spaces
+- Improve the auto-approve toggle buttons for some high-contrast VSCode themes
+- Offload expensive count token operations to a web worker (thanks @samhvw8)
+- Improve support for mult-root workspaces (thanks @snoyiatk)
+- Simplify and streamline Roo Code's quick actions
+- Allow Roo Code settings to be imported from the welcome screen (thanks @julionav)
+- Remove unused types (thanks @wkordalski)
+- Improve the performance of mode switching (thanks @dlab-anton)
+- Fix importing & exporting of custom modes (thanks @julionav)
+
+## [3.14.3] - 2025-04-25
+
+- Add Boomerang Orchestrator as a built-in mode
+- Improve home screen UI
+- Make token count estimation more efficient to reduce gray screens
+- Revert change to automatically close files after edit until we figure out how to make it work well with diagnostics
+- Clean up settings data model
+- Omit reasoning params for non-reasoning models
+- Clearer documentation for adding settings (thanks @shariqriazz!)
+- Fix word wrapping in Roo message title (thanks @zhangtony239!)
+- Update default model id for Unbound from claude 3.5 to 3.7 (thanks @pugazhendhi-m!)
+
+## [3.14.2] - 2025-04-24
+
+- Enable prompt caching for Gemini (with some improvements)
+- Allow users to turn prompt caching on / off for Gemini 2.5 on OpenRouter
+- Compress terminal output with backspace characters (thanks @KJ7LNW)
+- Add Russian language (Спасибо @asychin)
+
+## [3.14.1] - 2025-04-24
+
+- Disable Gemini caching while we investigate issues reported by the community.
+
+## [3.14.0] - 2025-04-23
+
+- Add prompt caching for `gemini-2.5-pro-preview-03-25` in the Gemini provider (Vertex and OpenRouter coming soon!)
+- Improve the search_and_replace and insert_content tools and bring them out of experimental, and deprecate append_to_file (thanks @samhvw8!)
+- Use material icons for files and folders in mentions (thanks @elianiva!)
+- Make the list_files tool more efficient and smarter about excluding directories like .git/
+- Fix file drag and drop on Windows and when using SSH tunnels (thanks @NyxJae!)
+- Correctly revert changes and suggest alternative tools when write_to_file fails on a missing line count
+- Allow interpolation of `workspace`, `mode`, `language`, `shell`, and `operatingSystem` into custom system prompt overrides (thanks @daniel-lxs!)
+- Fix interpolation bug in the “add to context” code action (thanks @elianiva!)
+- Preserve editor state and prevent tab unpinning during diffs (thanks @seedlord!)
+- Improvements to icon rendering on Linux (thanks @elianiva!)
+- Improvements to Requesty model list fetching (thanks @dtrugman!)
+- Fix user feedback not being added to conversation history in API error state, redundant ‘TASK RESUMPTION’ prompts, and error messages not showing after cancelling API requests (thanks @System233!)
+- Track tool use errors in evals
+- Fix MCP hub error when dragging extension to another sidebar
+- Improve display of long MCP tool arguments
+- Fix redundant ‘TASK RESUMPTION’ prompts (thanks @System233!)
+- Fix bug opening files when editor has no workspace root
+- Make the VS Code LM provider show the correct model information (thanks @QuinsZouls!)
+- Fixes to make the focusInput command more reliable (thanks @hongzio!)
+- Better handling of aftercursor content in context mentions (thanks @elianiva!)
+- Support injecting environment variables in MCP config (thanks @NamesMT!)
+- Better handling of FakeAI “controller” object (thanks @wkordalski)
+- Remove unnecessary calculation from VS Code LM provider (thanks @d-oit!)
+- Allow Amazon Bedrock Marketplace ARNs (thanks @mlopezr!)
+- Give better loading feedback on chat rows (thanks @elianiva!)
+- Performance improvements to task size calculations
+- Don’t immediately show a model ID error when changing API providers
+- Fix apply_diff edge cases
+- Use a more sensible task export icon
+- Use path aliases in webview source files
+- Display a warning when the system prompt is overridden
+- Better progress indicator for apply_diff tools (thanks @qdaxb!)
+- Fix terminal carriage return handling for correct progress bar display (thanks @Yikai-Liao!)
+
+## [3.13.2] - 2025-04-18
+
+- Allow custom URLs for Gemini provider
+
+## [3.13.1] - 2025-04-18
+
+- Support Gemini 2.5 Flash thinking mode (thanks @monotykamary)
+- Make auto-approval toggle on/off states more obvious (thanks @sachasayan)
+- Add telemetry for shell integration errors
+- Fix the path of files dragging into the chat textarea on Windows (thanks @NyxJae)
+
+## [3.13.0] - 2025-04-17
+
+- UI improvements to task header, chat view, history preview, and welcome view (thanks @sachasayan!)
+- Add append_to_file tool for appending content to files (thanks @samhvw8!)
+- Add Gemini 2.5 Flash Preview to Gemini and Vertex providers (thanks @nbihan-mediware!)
+- Fix image support in Bedrock (thanks @Smartsheet-JB-Brown!)
+- Make diff edits more resilient to models passing in incorrect parameters
+
+## [3.12.3] - 2025-04-17
+
+- Fix character escaping issues in Gemini diff edits
+- Support dragging and dropping tabs into the chat box (thanks @NyxJae!)
+- Make sure slash commands only fire at the beginning of the chat box (thanks @logosstone!)
+
+## [3.12.2] - 2025-04-16
+
+- Add OpenAI o3 & 4o-mini (thanks @PeterDaveHello!)
+- Improve file/folder context mention UI (thanks @elianiva!)
+- Improve diff error telemetry
+
+## [3.12.1] - 2025-04-16
+
+- Bugfix to Edit button visibility in the select dropdowns
+
+## [3.12.0] - 2025-04-15
+
+- Add xAI provider and expose reasoning effort options for Grok on OpenRouter (thanks Cline!)
+- Make diff editing config per-profile and improve pre-diff string normalization
+- Make checkpoints faster and more reliable
+- Add a search bar to mode and profile select dropdowns (thanks @samhvw8!)
+- Add telemetry for code action usage, prompt enhancement usage, and consecutive mistake errors
+- Suppress zero cost values in the task header (thanks @do-it!)
+- Make JSON parsing safer to avoid crashing the webview on bad input
+- Allow users to bind a keyboard shortcut for accepting suggestions or input in the chat view (thanks @axkirillov!)
+
+## [3.11.17] - 2025-04-14
+
+- Improvements to OpenAI cache reporting and cost estimates (thanks @monotykamary and Cline!)
+- Visual improvements to the auto-approve toggles (thanks @sachasayan!)
+- Bugfix to diff apply logic (thanks @avtc for the test case!) and telemetry to track errors going forward
+- Fix race condition in capturing short-running terminal commands (thanks @KJ7LNW!)
+- Fix eslint error (thanks @nobu007!)
+
+## [3.11.16] - 2025-04-14
+
+- Add gpt-4.1, gpt-4.1-mini, and gpt-4.1-nano to the OpenAI provider
+- Include model ID in environment details and when exporting tasks (thanks @feifei325!)
+
+## [3.11.15] - 2025-04-13
+
+- Add ability to filter task history by workspace (thanks @samhvw8!)
+- Fix Node.js version in the .tool-versions file (thanks @bogdan0083!)
+- Fix duplicate suggested mentions for open tabs (thanks @samhvw8!)
+- Fix Bedrock ARN validation and token expiry issue when using profiles (thanks @vagadiya!)
+- Add Anthropic option to pass API token as Authorization header instead of X-Api-Key (thanks @mecab!)
+- Better documentation for adding new settings (thanks @KJ7LNW!)
+- Localize package.json (thanks @samhvw8!)
+- Add option to hide the welcome message and fix the background color for the new profile dialog (thanks @zhangtony239!)
+- Restore the focus ring for the VSCodeButton component (thanks @pokutuna!)
+
 ## [3.11.14] - 2025-04-11
 
 - Support symbolic links in rules folders to directories and other symbolic links (thanks @taisukeoe!)

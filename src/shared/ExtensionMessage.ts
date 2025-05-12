@@ -1,11 +1,11 @@
+import { GitCommit } from "../utils/git"
+
 import {
-	ModelInfo,
 	GlobalSettings,
 	ApiConfigMeta,
 	ProviderSettings as ApiConfiguration,
 	HistoryItem,
 	ModeConfig,
-	CheckpointStorage,
 	TelemetrySetting,
 	ExperimentId,
 	ClineAsk,
@@ -14,8 +14,8 @@ import {
 	ClineMessage,
 } from "../schemas"
 import { McpServer } from "./mcp"
-import { GitCommit } from "../utils/git"
 import { Mode } from "./modes"
+import { RouterModels } from "./api"
 
 export type { ApiConfigMeta, ToolProgressStatus }
 
@@ -34,24 +34,20 @@ export interface ExtensionMessage {
 		| "action"
 		| "state"
 		| "selectedImages"
-		| "ollamaModels"
-		| "lmStudioModels"
 		| "theme"
 		| "workspaceUpdated"
 		| "invoke"
 		| "partialMessage"
-		| "openRouterModels"
-		| "glamaModels"
-		| "unboundModels"
-		| "requestyModels"
-		| "openAiModels"
 		| "mcpServers"
 		| "enhancedPrompt"
 		| "commitSearchResults"
 		| "listApiConfig"
+		| "routerModels"
+		| "openAiModels"
+		| "ollamaModels"
+		| "lmStudioModels"
 		| "vsCodeLmModels"
 		| "vsCodeLmApiAvailable"
-		| "requestVsCodeLmModels"
 		| "updatePrompt"
 		| "systemPrompt"
 		| "autoApprovalEnabled"
@@ -71,6 +67,10 @@ export interface ExtensionMessage {
 		| "toggleApiConfigPin"
 		| "flowModels"
 		| "githubCopilotModels"
+		| "acceptInput"
+		| "setHistoryPreviewCollapsed"
+		| "commandExecutionStatus"
+		| "vsCodeSetting"
 	text?: string
 	action?:
 		| "chatButtonClicked"
@@ -83,9 +83,6 @@ export interface ExtensionMessage {
 	invoke?: "newChat" | "sendMessage" | "primaryButtonClick" | "secondaryButtonClick" | "setChatBoxMessage"
 	state?: ExtensionState
 	images?: string[]
-	ollamaModels?: string[]
-	lmStudioModels?: string[]
-	vsCodeLmModels?: { vendor?: string; family?: string; version?: string; id?: string }[]
 	filePaths?: string[]
 	openedTabs?: Array<{
 		label: string
@@ -94,12 +91,20 @@ export interface ExtensionMessage {
 	}>
 	partialMessage?: ClineMessage
 	openRouterModels?: Record<string, ModelInfo>
+	glamaModels?: Record<string, ModelInfo>
+	unboundModels?: Record<string, ModelInfo>
+	requestyModels?: Record<string, ModelInfo>
+	openRouterModels?: Record<string, ModelInfo>
 	flowModels?: Record<string, ModelInfo>
 	githubCopilotModels?: Record<string, ModelInfo>
 	glamaModels?: Record<string, ModelInfo>
 	unboundModels?: Record<string, ModelInfo>
 	requestyModels?: Record<string, ModelInfo>
+	routerModels?: RouterModels
 	openAiModels?: string[]
+	ollamaModels?: string[]
+	lmStudioModels?: string[]
+	vsCodeLmModels?: { vendor?: string; family?: string; version?: string; id?: string }[]
 	mcpServers?: McpServer[]
 	commits?: GitCommit[]
 	listApiConfig?: ApiConfigMeta[]
@@ -110,12 +115,10 @@ export interface ExtensionMessage {
 	values?: Record<string, any>
 	requestId?: string
 	promptText?: string
-	results?: Array<{
-		path: string
-		type: "file" | "folder"
-		label?: string
-	}>
+	results?: { path: string; type: "file" | "folder"; label?: string }[]
 	error?: string
+	setting?: string
+	value?: any
 }
 
 export type ExtensionState = Pick<
@@ -146,8 +149,6 @@ export type ExtensionState = Pick<
 	| "remoteBrowserEnabled"
 	| "remoteBrowserHost"
 	// | "enableCheckpoints" // Optional in GlobalSettings, required here.
-	// | "checkpointStorage" // Optional in GlobalSettings, required here.
-	| "showGreeting"
 	| "ttsEnabled"
 	| "ttsSpeed"
 	| "soundEnabled"
@@ -158,12 +159,14 @@ export type ExtensionState = Pick<
 	// | "maxReadFileLine" // Optional in GlobalSettings, required here.
 	| "terminalOutputLineLimit"
 	| "terminalShellIntegrationTimeout"
+	| "terminalShellIntegrationDisabled"
 	| "terminalCommandDelay"
 	| "terminalPowershellCounter"
 	| "terminalZshClearEolMark"
 	| "terminalZshOhMy"
 	| "terminalZshP10k"
 	| "terminalZdotdir"
+	| "terminalCompressProgressBar"
 	| "diffEnabled"
 	| "fuzzyMatchThreshold"
 	// | "experiments" // Optional in GlobalSettings, required here.
@@ -191,7 +194,6 @@ export type ExtensionState = Pick<
 	requestDelaySeconds: number
 
 	enableCheckpoints: boolean
-	checkpointStorage: CheckpointStorage
 	maxOpenTabsContext: number // Maximum number of VSCode open tabs to include in context (0-500)
 	maxWorkspaceFiles: number // Maximum number of files to include in current working directory details (0-500)
 	showRooIgnoredFiles: boolean // Whether to show .rooignore'd files in listings
@@ -213,6 +215,7 @@ export type ExtensionState = Pick<
 
 	renderContext: "sidebar" | "editor"
 	settingsImportedAt?: number
+	historyPreviewCollapsed?: boolean
 }
 
 export type { ClineMessage, ClineAsk, ClineSay }
@@ -231,6 +234,8 @@ export interface ClineSayTool {
 		| "switchMode"
 		| "newTask"
 		| "finishTask"
+		| "searchAndReplace"
+		| "insertContent"
 	path?: string
 	diff?: string
 	content?: string
@@ -239,6 +244,13 @@ export interface ClineSayTool {
 	mode?: string
 	reason?: string
 	isOutsideWorkspace?: boolean
+	search?: string
+	replace?: string
+	useRegex?: boolean
+	ignoreCase?: boolean
+	startLine?: number
+	endLine?: number
+	lineNumber?: number
 }
 
 // Must keep in sync with system prompt.

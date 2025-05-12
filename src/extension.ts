@@ -14,21 +14,27 @@ try {
 
 import "./utils/path" // Necessary to have access to String.prototype.toPosix.
 
-import { initializeI18n } from "./i18n"
+import { ContextProxy } from "./core/config/ContextProxy"
 import { ClineProvider } from "./core/webview/ClineProvider"
-import { CodeActionProvider } from "./core/CodeActionProvider"
 import { DIFF_VIEW_URI_SCHEME } from "./integrations/editor/DiffViewProvider"
+import { TerminalRegistry } from "./integrations/terminal/TerminalRegistry"
 import { McpServerManager } from "./services/mcp/McpServerManager"
 import { telemetryService } from "./services/telemetry/TelemetryService"
-import { TerminalRegistry } from "./integrations/terminal/TerminalRegistry"
 import { API } from "./exports/api"
 import { migrateSettings } from "./utils/migrateSettings"
 import { SemanticProcessingManager } from "./core/semantic-processing"
 import { ClineSemanticIntegration } from "./core/semantic-processing/integration/ClineSemanticIntegration"
 import { registerSemanticCommands } from "./core/semantic-processing/commands"
-
-import { handleUri, registerCommands, registerCodeActions, registerTerminalActions } from "./activate"
 import { formatLanguage } from "./shared/language"
+
+import {
+	handleUri,
+	registerCommands,
+	registerCodeActions,
+	registerTerminalActions,
+	CodeActionProvider,
+} from "./activate"
+import { initializeI18n } from "./i18n"
 
 /**
  * Built using https://github.com/microsoft/vscode-webview-ui-toolkit
@@ -82,7 +88,8 @@ export async function activate(context: vscode.ExtensionContext) {
 		context.globalState.update("allowedCommands", defaultCommands)
 	}
 
-	const provider = new ClineProvider(context, outputChannel, "sidebar")
+	const contextProxy = await ContextProxy.getInstance(context)
+	const provider = new ClineProvider(context, outputChannel, "sidebar", contextProxy)
 	telemetryService.setProvider(provider)
 
 	// Configurar evento para integrar o sistema de processamento semântico com o Cline

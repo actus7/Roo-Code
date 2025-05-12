@@ -1,5 +1,5 @@
 import {
-	ApiProvider,
+	ProviderName,
 	ModelInfo,
 	anthropicModels,
 	bedrockModels,
@@ -8,10 +8,17 @@ import {
 	mistralModels,
 	openAiNativeModels,
 	vertexModels,
+	xaiModels,
+	groqModels,
+	chutesModels,
 	flowModels,
-} from "../../../../src/shared/api"
+} from "@roo/shared/api"
 
-export const MODELS_BY_PROVIDER: Partial<Record<ApiProvider, Record<string, ModelInfo>>> = {
+export { REASONING_MODELS, PROMPT_CACHING_MODELS } from "@roo/shared/api"
+
+export { AWS_REGIONS } from "@roo/shared/aws_regions"
+
+export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, ModelInfo>>> = {
 	anthropic: anthropicModels,
 	bedrock: bedrockModels,
 	deepseek: deepSeekModels,
@@ -19,29 +26,10 @@ export const MODELS_BY_PROVIDER: Partial<Record<ApiProvider, Record<string, Mode
 	mistral: mistralModels,
 	"openai-native": openAiNativeModels,
 	vertex: vertexModels,
-	flow: flowModels,
-}
-
-export const FLOW_MODEL_TYPES = [
-	{ value: "openai", label: "OpenAI (GPT-4)" },
-	{ value: "anthropic", label: "Anthropic (Claude)" },
-	{ value: "bedrock", label: "AWS Bedrock" },
-	{ value: "meta", label: "Meta (Llama)" },
-	{ value: "amazon", label: "Amazon (Nova)" },
-]
-
-export const FLOW_CONFIG = {
-	apiEndpoints: {
-		auth: "/auth-engine-api/v1/api-key/token",
-		modelsAzure: "/ai-orchestration-api/v1/models/azure-openai",
-		modelsBedrock: "/ai-orchestration-api/v1/models/amazon-bedrock",
-		openai: "/ai-orchestration-api/v1/openai/chat/completions",
-		google: "/ai-orchestration-api/v1/google/generateContent",
-		bedrock: "/ai-orchestration-api/v1/bedrock/invoke",
-	},
-	defaultTenant: "cit",
-	defaultBaseUrl: "https://flow.ciandt.com",
-	defaultAppToAccess: "llm-api",
+	xai: xaiModels,
+	groq: groqModels,
+	chutes: chutesModels,
+	flowModels,
 }
 
 export const PROVIDERS = [
@@ -63,6 +51,10 @@ export const PROVIDERS = [
 	{ value: "unbound", label: "Unbound" },
 	{ value: "requesty", label: "Requesty" },
 	{ value: "human-relay", label: "Human Relay" },
+	{ value: "xai", label: "xAI (Grok)" },
+	{ value: "groq", label: "Groq" },
+	{ value: "chutes", label: "Chutes AI" },
+	{ value: "litellm", label: "LiteLLM" },
 ].sort((a, b) => a.label.localeCompare(b.label))
 
 export const VERTEX_REGIONS = [
