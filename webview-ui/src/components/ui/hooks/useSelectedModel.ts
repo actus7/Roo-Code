@@ -31,6 +31,9 @@ import {
 	glamaDefaultModelId,
 	unboundDefaultModelId,
 	litellmDefaultModelId,
+	flowDefaultModelId,
+	flowModels,
+
 } from "@roo/shared/api"
 
 import { useRouterModels } from "./useRouterModels"
@@ -169,9 +172,11 @@ function getSelectedModel({
 			const info = vscodeLlmModels[modelFamily as keyof typeof vscodeLlmModels]
 			return { id, info: { ...openAiModelInfoSaneDefaults, ...info, supportsImages: false } } // VSCode LM API currently doesn't support images.
 		}
-		// case "anthropic":
-		// case "human-relay":
-		// case "fake-ai":
+		case "flow": {
+			const id = apiConfiguration.apiModelId ?? flowDefaultModelId
+			const info = flowModels[id as keyof typeof flowModels]
+			return info ? { id, info } : { id: flowDefaultModelId, info: flowModels[flowDefaultModelId] }
+		}
 		default: {
 			const id = apiConfiguration.apiModelId ?? anthropicDefaultModelId
 			const info = anthropicModels[id as keyof typeof anthropicModels]

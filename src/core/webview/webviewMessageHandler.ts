@@ -8,6 +8,7 @@ import { Language, ApiConfigMeta } from "../../schemas"
 import { changeLanguage, t } from "../../i18n"
 import { ApiConfiguration, RouterName, toRouterName } from "../../shared/api"
 import { supportPrompt } from "../../shared/support-prompt"
+import { GlobalFileNames } from "../../shared/globalFileNames"
 
 import { checkoutDiffPayloadSchema, checkoutRestorePayloadSchema, WebviewMessage } from "../../shared/WebviewMessage"
 import { checkExistKey } from "../../shared/checkExistApiConfig"

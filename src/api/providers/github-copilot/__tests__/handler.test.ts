@@ -1,4 +1,5 @@
 import { GitHubCopilotHandler } from '../handler';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { convertCopilotModelToModelInfo } from '../models';
 
 describe('GitHubCopilotHandler', () => {

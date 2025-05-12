@@ -31,8 +31,10 @@ type ModelIdKey = keyof Pick<
 
 interface ModelPickerProps {
 	defaultModelId: string
+	defaultModelInfo?: ModelInfo
 	models: Record<string, ModelInfo> | null
 	modelIdKey: ModelIdKey
+	modelInfoKey?: string
 	serviceName: string
 	serviceUrl: string
 	apiConfiguration: ProviderSettings

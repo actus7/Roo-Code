@@ -17,9 +17,7 @@ import {
 	ApiConfiguration,
 	requestyDefaultModelId,
 	openRouterDefaultModelId,
-	glamaDefaultModelId,
-	glamaDefaultModelInfo,
-	glamaDefaultModelInfo
+	glamaDefaultModelId
 } from "../../shared/api"
 import { findLast } from "../../shared/array"
 import { supportPrompt } from "../../shared/support-prompt"
@@ -949,7 +947,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 	}
 
 	// Glama
-	
+
 	async handleGlamaCallback(code: string) {
 		let apiKey: string
 		try {
@@ -1466,6 +1464,51 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 	// Add public getter
 	public getMcpHub(): McpHub | undefined {
 		return this.mcpHub
+	}
+
+	/**
+	 * Writes models to cache file
+	 * @param filename The name of the cache file
+	 * @param models The models to cache
+	 */
+	public async writeModelsToCache(filename: string, models: any): Promise<void> {
+		try {
+			const { getSettingsDirectoryPath } = await import("../../shared/storagePathManager")
+			const globalStoragePath = this.contextProxy.globalStorageUri.fsPath
+			const settingsDir = await getSettingsDirectoryPath(globalStoragePath)
+			const filePath = path.join(settingsDir, filename)
+
+			await fs.writeFile(filePath, JSON.stringify(models, null, 2), 'utf8')
+			this.log(`Models cached to ${filePath}`)
+		} catch (error) {
+			this.log(`Error writing models to cache: ${error instanceof Error ? error.message : String(error)}`)
+		}
+	}
+
+	/**
+	 * Reads models from cache file
+	 * @param filename The name of the cache file
+	 * @returns The cached models or undefined if not found
+	 */
+	public async readModelsFromCache(filename: string): Promise<any> {
+		try {
+			const { getSettingsDirectoryPath } = await import("../../shared/storagePathManager")
+			const globalStoragePath = this.contextProxy.globalStorageUri.fsPath
+			const settingsDir = await getSettingsDirectoryPath(globalStoragePath)
+			const filePath = path.join(settingsDir, filename)
+
+			const exists = await fileExistsAtPath(filePath)
+			if (!exists) {
+				this.log(`Cache file ${filePath} not found`)
+				return undefined
+			}
+
+			const data = await fs.readFile(filePath, 'utf8')
+			return JSON.parse(data)
+		} catch (error) {
+			this.log(`Error reading models from cache: ${error instanceof Error ? error.message : String(error)}`)
+			return undefined
+		}
 	}
 
 	/**

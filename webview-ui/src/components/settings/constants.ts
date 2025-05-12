@@ -29,7 +29,7 @@ export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, Mod
 	xai: xaiModels,
 	groq: groqModels,
 	chutes: chutesModels,
-	flowModels,
+	flow: flowModels,
 }
 
 export const PROVIDERS = [

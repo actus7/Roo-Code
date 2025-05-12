@@ -3,7 +3,6 @@ import fs from "fs"
 
 import { defineConfig, type Plugin } from "vite"
 import react from "@vitejs/plugin-react"
-import tailwindcss from "@tailwindcss/vite"
 
 function wasmPlugin(): Plugin {
 	return {
@@ -45,21 +44,58 @@ const writePortToFile = () => {
 	}
 }
 
+// Custom plugin to fix React JSX runtime issues
+const fixReactJsxRuntime = (): Plugin => {
+  return {
+    name: 'fix-react-jsx-runtime',
+    // This runs before Vite's internal JSX transform
+    config(config) {
+      // Make sure React is properly processed
+      return {
+        ...config,
+        resolve: {
+          ...config.resolve,
+          dedupe: [...(config.resolve?.dedupe || []), 'react', 'react-dom']
+        },
+        build: {
+          ...config.build,
+          commonjsOptions: {
+            ...config.build?.commonjsOptions,
+            include: [/node_modules/, /jsx-runtime/],
+            transformMixedEsModules: true
+          }
+        }
+      }
+    }
+  }
+}
+
 // https://vitejs.dev/config/
 export default defineConfig({
-	plugins: [react(), tailwindcss(), writePortToFile(), wasmPlugin()],
+	plugins: [
+		react({
+			// This is important for JSX runtime
+			jsxRuntime: 'automatic',
+			// Ensure React refresh works properly
+			fastRefresh: true,
+		}),
+		writePortToFile(),
+		wasmPlugin(),
+		fixReactJsxRuntime()
+	],
 	resolve: {
 		alias: {
 			"@": resolve(__dirname, "./src"),
 			"@src": resolve(__dirname, "./src"),
 			"@roo": resolve(__dirname, "../src"),
 		},
+		// Ensure React is properly resolved
+		dedupe: ['react', 'react-dom']
 	},
 	build: {
 		outDir: "build",
 		reportCompressedSize: false,
 		rollupOptions: {
-			// Removido a lista de externos para permitir que o Vite inclua os módulos Radix UI no bundle
 			output: {
 				entryFileNames: `assets/[name].js`,
 				chunkFileNames: `assets/[name].js`,
@@ -83,6 +119,7 @@ export default defineConfig({
 		"process.env.VSCODE_TEXTMATE_DEBUG": JSON.stringify(process.env.VSCODE_TEXTMATE_DEBUG),
 	},
 	optimizeDeps: {
+		include: ['react', 'react-dom', 'react/jsx-runtime'],
 		exclude: ["@vscode/codicons", "vscode-oniguruma", "shiki"],
 	},
 	assetsInclude: ["**/*.wasm"],

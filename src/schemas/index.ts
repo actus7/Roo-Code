@@ -427,7 +427,6 @@ export const providerSettingsSchema = z.object({
 	requestyApiKey: z.string().optional(),
 	requestyModelId: z.string().optional(),
 	requestyModelInfo: modelInfoSchema.nullish(),
-	requestyModelInfo: modelInfoSchema.nullish(),
 	// GitHub Copilot
 	githubCopilotModel: z.string().optional(),
 	githubCopilotModelInfo: modelInfoSchema.optional(),
@@ -550,6 +549,7 @@ const providerSettingsRecord: ProviderSettingsRecord = {
 	// Requesty
 	requestyApiKey: undefined,
 	requestyModelId: undefined,
+	requestyModelInfo: undefined,
 	// Claude 3.7 Sonnet Thinking
 	modelMaxTokens: undefined,
 	modelMaxThinkingTokens: undefined,

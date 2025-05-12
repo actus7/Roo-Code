@@ -1142,7 +1142,7 @@ export const unboundDefaultModelInfo: ModelInfo = {
 }
 
 // Flow
-export const flowDefaultModelId = "gpt-4o"
+export const flowDefaultModelId = "anthropic.claude-35-sonnet"
 export const flowModels: Record<string, ModelInfo> = {
 	"gpt-4o": {
 		maxTokens: 8192,

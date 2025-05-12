@@ -6,15 +6,16 @@ import * as vscode from "vscode"
 import axios, { AxiosInstance } from "axios"
 import { v4 as uuidv4 } from "uuid"
 
-import { 
-    ChatMessage, 
-    ChatRequest, 
-    CopilotModel, 
-    CopilotModelsResponse, 
-    CopilotToken, 
-    GitHubCopilotApiOptions 
+import {
+    ChatMessage,
+    ChatRequest,
+    CopilotModel,
+    CopilotModelsResponse,
+    CopilotToken,
+    GitHubCopilotApiOptions
 } from "./types"
 import { handleNonStreamingRequest, handleStreamingRequest } from "./request-handlers"
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { cleanResponse } from "./response-handlers"
 
 /**
@@ -289,7 +290,7 @@ export class GitHubCopilotApi {
      * @returns Resposta completa após o fim do streaming
      */
     public async sendChatRequestStream(
-        request: ChatRequest, 
+        request: ChatRequest,
         initiator: "agent" | "user" = "agent",
         onChunk: (chunk: string) => void
     ): Promise<string> {
@@ -368,18 +369,18 @@ export class GitHubCopilotApi {
 
                 // Usa a versão não-streaming como fallback
                 const fallbackResponse = await this.sendChatRequest(alternativeRequest, "user")
-                
+
                 // Chama o callback com a resposta completa
                 onChunk(fallbackResponse)
-                
+
                 return fallbackResponse
             } catch (alternativeError) {
                 console.error("Erro com modelo alternativo:", alternativeError)
                 const errorMessage = "Desculpe, não consegui gerar uma resposta. Por favor, tente novamente ou use outro modelo."
-                
+
                 // Chama o callback com a mensagem de erro
                 onChunk(errorMessage)
-                
+
                 return errorMessage
             }
         }

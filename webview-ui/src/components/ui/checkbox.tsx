@@ -28,6 +28,7 @@ export interface CheckboxProps extends VariantProps<typeof checkboxVariants> {
 	onCheckedChange?: (checked: boolean) => void
 	className?: string
 	disabled?: boolean
+	id?: string
 }
 
 const Checkbox = React.forwardRef<HTMLDivElement, CheckboxProps>(

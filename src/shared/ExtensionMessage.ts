@@ -1,4 +1,5 @@
 import { GitCommit } from "../utils/git"
+import { ModelInfo } from "../shared/api"
 
 import {
 	GlobalSettings,
@@ -94,12 +95,8 @@ export interface ExtensionMessage {
 	glamaModels?: Record<string, ModelInfo>
 	unboundModels?: Record<string, ModelInfo>
 	requestyModels?: Record<string, ModelInfo>
-	openRouterModels?: Record<string, ModelInfo>
 	flowModels?: Record<string, ModelInfo>
 	githubCopilotModels?: Record<string, ModelInfo>
-	glamaModels?: Record<string, ModelInfo>
-	unboundModels?: Record<string, ModelInfo>
-	requestyModels?: Record<string, ModelInfo>
 	routerModels?: RouterModels
 	openAiModels?: string[]
 	ollamaModels?: string[]

@@ -79,12 +79,12 @@ export function processStreamResponse(streamData: string, onChunk: (chunk: strin
 
     const lines = streamData.split('\n');
     let responseBuffer = "";
-    
+
     for (const line of lines) {
         if (line.startsWith('data: ') && line !== 'data: [DONE]') {
             try {
                 const jsonData = JSON.parse(line.substring(6));
-                
+
                 // Extrai o conteúdo do chunk
                 let chunk = "";
                 if (jsonData.choices && jsonData.choices.length > 0) {
@@ -95,14 +95,14 @@ export function processStreamResponse(streamData: string, onChunk: (chunk: strin
                         chunk = choice.message.content;
                     }
                 }
-                
+
                 if (chunk) {
                     // Limpa o chunk
                     const cleanedChunk = cleanResponse(chunk);
-                    
+
                     // Adiciona ao buffer
                     responseBuffer += cleanedChunk;
-                    
+
                     // Chama o callback com o chunk limpo
                     onChunk(cleanedChunk);
                 }
@@ -111,6 +111,6 @@ export function processStreamResponse(streamData: string, onChunk: (chunk: strin
             }
         }
     }
-    
+
     return responseBuffer;
 }

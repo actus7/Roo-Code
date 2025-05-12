@@ -26,7 +26,7 @@ export async function* createStreamingMessage(
     const abortController = new AbortController();
 
     try {
-        let fullResponse = "";
+        let _fullResponse = "";
         // Criar um array para simular um stream iterável
         const stream: any[] = [];
 
@@ -39,7 +39,7 @@ export async function* createStreamingMessage(
             max_tokens: model.capabilities?.limits?.max_output_tokens || 4096,
             stream: true
         }, "user", (chunk: string) => {
-            fullResponse += chunk;
+            _fullResponse += chunk;
             // Criar um objeto que simula o formato esperado pelo código existente
             const fakeChunk = {
                 choices: [{
