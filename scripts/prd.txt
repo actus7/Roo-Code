@@ -1,0 +1,150 @@
+# Implementação do Provider Flow
+
+## 1. Visão Geral
+Este documento descreve a implementação de um novo provider chamado "Flow" para integração com a API de orquestração de IA da Flow. O provider permitirá autenticação, seleção de modelos de diferentes provedores (Azure OpenAI, Azure Foundry, Google Gemini, Amazon Bedrock) e envio de requisições formatadas corretamente para cada provedor.
+
+## 2. Arquitetura
+### 2.1 Componentes Principais
+- **FlowHandler**: Classe principal que implementa as interfaces BaseProvider e SingleCompletionHandler
+- **Autenticação**: Módulo para gerenciar tokens de autenticação
+- **Gerenciamento de Modelos**: Funcionalidade para buscar e armazenar informações sobre modelos disponíveis
+- **Formatação de Requisições**: Lógica para formatar requisições específicas para cada provedor
+- **Processamento de Respostas**: Lógica para extrair e normalizar respostas de diferentes provedores
+
+### 2.2 Integração com o Sistema Existente
+O provider Flow será integrado ao sistema existente através dos seguintes pontos:
+- Registro no sistema de providers
+- Integração com o sistema de cache de modelos
+- Adição ao tipo RouterName
+
+## 3. Requisitos Funcionais
+### 3.1 Autenticação
+- **RF-01**: O sistema deve autenticar com a API Flow usando clientId, clientSecret e tenant
+- **RF-02**: O sistema deve armazenar o token de autenticação em memória para reutilização
+- **RF-03**: O sistema deve renovar o token automaticamente quando expirado
+
+### 3.2 Gerenciamento de Modelos
+- **RF-04**: O sistema deve buscar modelos de todos os provedores suportados (Azure OpenAI, Azure Foundry, Google Gemini, Amazon Bedrock)
+- **RF-05**: O sistema deve armazenar informações sobre cada modelo, incluindo o provedor de origem
+- **RF-06**: O sistema deve criar IDs únicos para cada modelo no formato provider:modelId
+- **RF-07**: O sistema deve armazenar os modelos em cache para melhorar a performance
+
+### 3.3 Formatação de Requisições
+- **RF-08**: O sistema deve formatar requisições para o Azure OpenAI usando o formato OpenAI
+- **RF-09**: O sistema deve formatar requisições para o Google Gemini usando o formato Gemini
+- **RF-10**: O sistema deve formatar requisições para o Amazon Bedrock usando o formato Bedrock/Claude
+- **RF-11**: O sistema deve incluir cabeçalhos específicos do Flow em todas as requisições
+
+### 3.4 Processamento de Respostas
+- **RF-12**: O sistema deve extrair conteúdo de respostas do Azure OpenAI
+- **RF-13**: O sistema deve extrair conteúdo de respostas do Google Gemini
+- **RF-14**: O sistema deve extrair conteúdo de respostas do Amazon Bedrock
+- **RF-15**: O sistema deve normalizar informações de uso de tokens quando disponíveis
+
+## 4. Requisitos Não-Funcionais
+- **RNF-01**: O sistema deve ser resiliente a falhas temporárias na API Flow
+- **RNF-02**: O sistema deve implementar logging adequado para depuração
+- **RNF-03**: O sistema deve ser extensível para suportar novos provedores no futuro
+- **RNF-04**: O sistema deve seguir os padrões de codificação existentes
+
+## 5. Estrutura de Arquivos
+```
+src/
+├── api/
+│   ├── providers/
+│   │   ├── flow.ts                  # Implementação principal do FlowHandler
+│   │   ├── fetchers/
+│   │   │   └── modelCache.ts        # Atualização para incluir suporte ao Flow
+│   │   └── index.ts                 # Atualização para exportar o FlowHandler
+│   └── index.ts                     # Atualização para registrar o FlowHandler
+├── shared/
+│   └── api.ts                       # Atualização para incluir "flow" no tipo RouterName
+└── types/
+    └── flow.ts                      # Tipos específicos para a API Flow (opcional)
+```
+
+## 6. Interfaces e Tipos
+### 6.1 Configuração do Provider Flow
+```typescript
+interface FlowProviderOptions extends ApiHandlerOptions {
+  flowBaseUrl?: string;
+  flowTenant: string;
+  flowClientId: string;
+  flowClientSecret: string;
+  flowAppToAccess?: string;
+  flowModelId?: string;
+}
+```
+
+### 6.2 Informações de Modelo Flow
+```typescript
+interface FlowModelInfo extends ModelInfo {
+  provider: string;
+  originalModelId: string;
+}
+```
+
+## 7. Fluxos de Dados
+### 7.1 Fluxo de Autenticação
+1. Verificar se já existe um token válido em memória
+2. Se não existir, fazer uma requisição POST para /auth-engine-api/v1/api-key/token
+3. Armazenar o token retornado para uso futuro
+
+### 7.2 Fluxo de Busca de Modelos
+Para cada provedor suportado:
+1. Fazer uma requisição GET para /ai-orchestration-api/v1/models/{provider}
+2. Processar a resposta e extrair informações dos modelos
+3. Criar IDs únicos no formato provider:modelId
+4. Armazenar as informações no cache de modelos
+
+### 7.3 Fluxo de Completions
+1. Obter o token de autenticação
+2. Determinar o provedor e modelo a ser usado
+3. Formatar a requisição de acordo com o provedor
+4. Enviar a requisição para o endpoint correto
+5. Processar a resposta de acordo com o formato do provedor
+6. Retornar o conteúdo normalizado
+
+## 8. Considerações de Segurança
+- Credenciais (clientId, clientSecret) devem ser armazenadas de forma segura
+- Tokens de autenticação não devem ser expostos em logs
+- Validação adequada de entradas para evitar injeção
+
+## 9. Testes
+### 9.1 Testes Unitários
+- Teste de autenticação
+- Teste de busca de modelos
+- Teste de formatação de requisições
+- Teste de processamento de respostas
+
+### 9.2 Testes de Integração
+- Teste de fluxo completo com cada provedor
+- Teste de cenários de erro
+- Teste de performance
+
+## 10. Plano de Implementação
+### 10.1 Fase 1: Estrutura Básica
+- Criar a classe FlowHandler com métodos básicos
+- Implementar autenticação
+- Atualizar tipos e interfaces
+
+### 10.2 Fase 2: Gerenciamento de Modelos
+- Implementar busca de modelos
+- Integrar com o sistema de cache
+- Criar IDs únicos para modelos
+
+### 10.3 Fase 3: Completions
+- Implementar formatação de requisições para cada provedor
+- Implementar processamento de respostas
+- Integrar com o sistema existente
+
+### 10.4 Fase 4: Testes e Documentação
+- Implementar testes unitários
+- Implementar testes de integração
+
+## 11. Glossário
+- **Flow**: Plataforma de orquestração de IA
+- **Provider**: Implementação de um serviço de IA específico
+- **Tenant**: Identificador de organização no Flow
+- **Model**: Modelo de IA disponível através do Flow
+- **Completion**: Resposta gerada por um modelo de IA
