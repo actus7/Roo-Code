@@ -29,6 +29,7 @@ type GlobalSettings = {
 							| "groq"
 							| "chutes"
 							| "litellm"
+							| "flow"
 					  )
 					| undefined
 		  }[]
@@ -194,6 +195,7 @@ type ProviderSettings = {
 				| "groq"
 				| "chutes"
 				| "litellm"
+				| "flow"
 		  )
 		| undefined
 	includeMaxTokens?: boolean | undefined
@@ -305,6 +307,14 @@ type ProviderSettings = {
 	litellmBaseUrl?: string | undefined
 	litellmApiKey?: string | undefined
 	litellmModelId?: string | undefined
+	flowBaseUrl?: string | undefined
+	flowAuthBaseUrl?: string | undefined
+	flowTenant?: string | undefined
+	flowClientId?: string | undefined
+	flowClientSecret?: string | undefined
+	flowAppToAccess?: string | undefined
+	flowAgent?: string | undefined
+	flowModelId?: string | undefined
 }
 
 type ProviderSettingsEntry = {
@@ -333,6 +343,7 @@ type ProviderSettingsEntry = {
 				| "groq"
 				| "chutes"
 				| "litellm"
+				| "flow"
 		  )
 		| undefined
 }

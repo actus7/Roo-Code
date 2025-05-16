@@ -1742,3 +1742,18 @@ export function toRouterName(value?: string): RouterName {
 export type ModelRecord = Record<string, ModelInfo>
 
 export type RouterModels = Record<RouterName, ModelRecord>
+
+// Flow
+// https://flow.ciandt.com
+export type FlowModelId = string
+export const flowDefaultModelId: FlowModelId = "gpt-4o-mini"
+export const flowDefaultModelInfo: ModelInfo = {
+	maxTokens: 4096,
+	contextWindow: 128_000,
+	supportsImages: true,
+	supportsPromptCache: false,
+	inputPrice: 0.5,
+	outputPrice: 1.5,
+	description:
+		"Default Flow model (GPT-4o Mini). Flow dynamically discovers available models from various providers.",
+}

@@ -32,6 +32,7 @@ export const providerNames = [
 	"groq",
 	"chutes",
 	"litellm",
+	"flow",
 ] as const
 
 export const providerNamesSchema = z.enum(providerNames)
@@ -491,6 +492,17 @@ const litellmSchema = baseProviderSettingsSchema.extend({
 	litellmModelId: z.string().optional(),
 })
 
+const flowSchema = baseProviderSettingsSchema.extend({
+	flowBaseUrl: z.string().optional(),
+	flowAuthBaseUrl: z.string().optional(),
+	flowTenant: z.string().optional(),
+	flowClientId: z.string().optional(),
+	flowClientSecret: z.string().optional(),
+	flowAppToAccess: z.string().optional(),
+	flowAgent: z.string().optional(),
+	flowModelId: z.string().optional(),
+})
+
 const defaultSchema = z.object({
 	apiProvider: z.undefined(),
 })
@@ -517,6 +529,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	groqSchema.merge(z.object({ apiProvider: z.literal("groq") })),
 	chutesSchema.merge(z.object({ apiProvider: z.literal("chutes") })),
 	litellmSchema.merge(z.object({ apiProvider: z.literal("litellm") })),
+	flowSchema.merge(z.object({ apiProvider: z.literal("flow") })),
 	defaultSchema,
 ])
 
@@ -545,6 +558,7 @@ export const providerSettingsSchema = z
 	.merge(groqSchema)
 	.merge(chutesSchema)
 	.merge(litellmSchema)
+	.merge(flowSchema)
 
 export type ProviderSettings = z.infer<typeof providerSettingsSchema>
 
@@ -643,6 +657,15 @@ const providerSettingsRecord: ProviderSettingsRecord = {
 	litellmBaseUrl: undefined,
 	litellmApiKey: undefined,
 	litellmModelId: undefined,
+	// Flow
+	flowBaseUrl: undefined,
+	flowAuthBaseUrl: undefined,
+	flowTenant: undefined,
+	flowClientId: undefined,
+	flowClientSecret: undefined,
+	flowAppToAccess: undefined,
+	flowAgent: undefined,
+	flowModelId: undefined,
 }
 
 export const PROVIDER_SETTINGS_KEYS = Object.keys(providerSettingsRecord) as Keys<ProviderSettings>[]
@@ -838,6 +861,7 @@ export type SecretState = Pick<
 	| "groqApiKey"
 	| "chutesApiKey"
 	| "litellmApiKey"
+	| "flowClientSecret"
 >
 
 type SecretStateRecord = Record<Keys<SecretState>, undefined>
@@ -860,6 +884,7 @@ const secretStateRecord: SecretStateRecord = {
 	groqApiKey: undefined,
 	chutesApiKey: undefined,
 	litellmApiKey: undefined,
+	flowClientSecret: undefined,
 }
 
 export const SECRET_STATE_KEYS = Object.keys(secretStateRecord) as Keys<SecretState>[]

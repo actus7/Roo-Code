@@ -144,6 +144,17 @@
 		"getXaiApiKey": "Get xAI API Key",
 		"litellmApiKey": "LiteLLM API Key",
 		"litellmBaseUrl": "LiteLLM Base URL",
+		"flow": {
+			"description": "Flow is an AI orchestration platform that provides access to multiple AI models from different providers.",
+			"learnMore": "Learn more about Flow",
+			"baseUrl": "Base URL",
+			"authBaseUrl": "Auth Base URL",
+			"tenant": "Tenant",
+			"clientId": "Client ID",
+			"clientSecret": "Client Secret",
+			"appToAccess": "App to Access",
+			"agent": "Agent"
+		},
 		"awsCredentials": "AWS Credentials",
 		"awsProfile": "AWS Profile",
 		"awsProfileName": "AWS Profile Name",
