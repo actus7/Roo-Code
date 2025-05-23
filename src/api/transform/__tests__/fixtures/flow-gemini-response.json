@@ -1,0 +1,39 @@
+{
+	"id": "chatcmpl-456",
+	"object": "chat.completion",
+	"created": 1700000001,
+	"choices": [
+		{
+			"index": 0,
+			"message": {
+				"role": "assistant",
+				"content": "Esta é uma resposta de teste do Gemini"
+			}
+		}
+	],
+	"provider": "gemini",
+	"model": "gemini-pro",
+	"temperature": 0.8,
+	"message": {
+		"content": "Esta é uma resposta de teste do Gemini"
+	},
+	"usage": {
+		"promptTokens": 40,
+		"completionTokens": 25,
+		"totalTokens": 65
+	},
+	"safety_ratings": [
+		{
+			"category": "HARM_CATEGORY_HATE",
+			"probability": 0.1
+		},
+		{
+			"category": "HARM_CATEGORY_DANGEROUS",
+			"probability": 0.05
+		}
+	],
+	"metadata": {
+		"requestId": "xyz-789",
+		"candidateCount": 1
+	}
+}

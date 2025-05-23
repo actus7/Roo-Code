@@ -1,0 +1,61 @@
+			case "requestFlowModels":
+				if (message?.values) {
+					try {
+						// Importar a função getFlowModels
+						const flowModule = await import("../../api/providers/fetchers/flow")
+						const { getFlowModels } = flowModule
+
+						// Extrair valores da mensagem
+						const { 
+							flowBaseUrl, 
+							flowAuthBaseUrl, 
+							flowTenant, 
+							flowClientId, 
+							flowClientSecret, 
+							flowAppToAccess 
+						} = message.values
+						
+						// Verificar se temos as credenciais necessárias
+						if (flowTenant && flowClientId && flowClientSecret) {
+							try {
+								// Buscar modelos usando a função getFlowModels
+								const models = await getFlowModels({
+									flowBaseUrl: flowBaseUrl || "https://flow.ciandt.com",
+									flowAuthBaseUrl,
+									flowTenant,
+									flowClientId,
+									flowClientSecret,
+									flowAppToAccess: flowAppToAccess || "llm-api"
+								})
+								
+								// Enviar os modelos para o webview
+								provider.postMessageToWebview({ 
+									type: "flowModels", 
+									models,
+									error: null
+								})
+							} catch (error) {
+								console.error("Erro ao buscar modelos do Flow:", error)
+								provider.postMessageToWebview({ 
+									type: "flowModels", 
+									models: null,
+									error: `Erro ao buscar modelos: ${error instanceof Error ? error.message : String(error)}`
+								})
+							}
+						} else {
+							provider.postMessageToWebview({ 
+								type: "flowModels", 
+								models: null,
+								error: "Credenciais incompletas. Forneça tenant, clientId e clientSecret."
+							})
+						}
+					} catch (error) {
+						console.error("Erro ao buscar modelos do Flow:", error)
+						provider.postMessageToWebview({
+							type: "flowModels",
+							models: null,
+							error: `Erro ao buscar modelos: ${error instanceof Error ? error.message : String(error)}`
+						})
+					}
+				}
+				break

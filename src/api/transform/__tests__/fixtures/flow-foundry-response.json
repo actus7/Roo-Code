@@ -1,0 +1,37 @@
+{
+	"id": "chatcmpl-012",
+	"object": "chat.completion",
+	"created": 1700000003,
+	"choices": [
+		{
+			"index": 0,
+			"message": {
+				"role": "assistant",
+				"content": "<think>Processando resposta...</think>Esta é uma resposta de teste do Foundry"
+			}
+		}
+	],
+	"provider": "foundry",
+	"model": "foundry-v1",
+	"temperature": 0.7,
+	"content": "<think>Processando resposta...</think>Esta é uma resposta de teste do Foundry",
+	"usage": {
+		"promptTokens": 35,
+		"completionTokens": 20,
+		"totalTokens": 55
+	},
+	"safety_ratings": [
+		{
+			"category": "HARM_LEVEL_1",
+			"probability": 0.01
+		},
+		{
+			"category": "HARM_LEVEL_2",
+			"probability": 0.03
+		}
+	],
+	"metadata": {
+		"requestId": "ghi-789",
+		"engineVersion": "1.0.0"
+	}
+}
