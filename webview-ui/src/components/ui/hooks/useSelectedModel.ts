@@ -31,7 +31,9 @@ import {
 	glamaDefaultModelId,
 	unboundDefaultModelId,
 	litellmDefaultModelId,
+	flowDefaultModelId,
 } from "@roo/shared/api"
+import { flowModels } from "@roo/shared/api/models"
 
 import { useRouterModels } from "./useRouterModels"
 import { useOpenRouterModelProviders } from "./useOpenRouterModelProviders"
@@ -114,6 +116,11 @@ function getSelectedModel({
 			return info
 				? { id, info }
 				: { id: litellmDefaultModelId, info: routerModels.litellm[litellmDefaultModelId] }
+		}
+		case "flow": {
+			const id = apiConfiguration.flowModelId ?? flowDefaultModelId
+			const info = flowModels[id as keyof typeof flowModels]
+			return info ? { id, info } : { id: flowDefaultModelId, info: flowModels[flowDefaultModelId] }
 		}
 		case "xai": {
 			const id = apiConfiguration.apiModelId ?? xaiDefaultModelId

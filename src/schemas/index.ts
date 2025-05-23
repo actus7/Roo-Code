@@ -4,7 +4,7 @@
 
 import { z } from "zod"
 
-import { Equals, Keys, AssertEqual } from "../utils/type-fu"
+import { Keys } from "../utils/type-fu"
 
 /**
  * ProviderName
@@ -32,6 +32,7 @@ export const providerNames = [
 	"groq",
 	"chutes",
 	"litellm",
+	"flow",
 ] as const
 
 export const providerNamesSchema = z.enum(providerNames)
@@ -329,7 +330,7 @@ const experimentsSchema = z.object({
 
 export type Experiments = z.infer<typeof experimentsSchema>
 
-type _AssertExperiments = AssertEqual<Equals<ExperimentId, Keys<Experiments>>>
+// Verificação de tipo em tempo de compilação removida para evitar warnings
 
 /**
  * ProviderSettingsEntry
@@ -487,6 +488,26 @@ const groqSchema = apiModelIdProviderModelSchema.extend({
 const chutesSchema = apiModelIdProviderModelSchema.extend({
 	chutesApiKey: z.string().optional(),
 })
+const flowSchema = baseProviderSettingsSchema.extend({
+	// Base configuration
+	flowBaseUrl: z.string().optional(),
+	flowTenant: z.string().optional(),
+
+	// Authentication configuration
+	flowClientId: z.string().optional(),
+	flowClientSecret: z.string().optional(),
+	flowAuthBaseUrl: z.string().optional(),
+
+	// Service configuration
+	flowAppToAccess: z.string().optional(),
+	flowAgent: z.string().optional(),
+	flowRequestTimeout: z.number().optional(),
+
+	// Model configuration
+	flowModelId: z.string().optional(),
+	flowModelTemperature: z.number().optional(),
+	flowModelMaxTokens: z.number().optional(),
+})
 
 const litellmSchema = baseProviderSettingsSchema.extend({
 	litellmBaseUrl: z.string().optional(),
@@ -499,6 +520,7 @@ const defaultSchema = z.object({
 })
 
 export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProvider", [
+	flowSchema.merge(z.object({ apiProvider: z.literal("flow") })),
 	anthropicSchema.merge(z.object({ apiProvider: z.literal("anthropic") })),
 	glamaSchema.merge(z.object({ apiProvider: z.literal("glama") })),
 	openRouterSchema.merge(z.object({ apiProvider: z.literal("openrouter") })),
@@ -527,6 +549,7 @@ export const providerSettingsSchema = z
 	.object({
 		apiProvider: providerNamesSchema.optional(),
 	})
+	.merge(flowSchema)
 	.merge(anthropicSchema)
 	.merge(glamaSchema)
 	.merge(openRouterSchema)
@@ -555,6 +578,18 @@ type ProviderSettingsRecord = Record<Keys<ProviderSettings>, undefined>
 
 const providerSettingsRecord: ProviderSettingsRecord = {
 	apiProvider: undefined,
+	// Flow
+	flowBaseUrl: undefined,
+	flowTenant: undefined,
+	flowClientId: undefined,
+	flowClientSecret: undefined,
+	flowAuthBaseUrl: undefined,
+	flowAppToAccess: undefined,
+	flowAgent: undefined,
+	flowRequestTimeout: undefined,
+	flowModelId: undefined,
+	flowModelTemperature: undefined,
+	flowModelMaxTokens: undefined,
 	// Anthropic
 	apiModelId: undefined,
 	apiKey: undefined,

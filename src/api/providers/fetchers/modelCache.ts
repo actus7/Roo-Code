@@ -13,6 +13,7 @@ import { getRequestyModels } from "./requesty"
 import { getGlamaModels } from "./glama"
 import { getUnboundModels } from "./unbound"
 import { getLiteLLMModels } from "./litellm"
+import { getFlowModels } from "./flow"
 
 const memoryCache = new NodeCache({ stdTTL: 5 * 60, checkperiod: 5 * 60 })
 
@@ -71,6 +72,25 @@ export const getModels = async (
 			if (apiKey && baseUrl) {
 				models = await getLiteLLMModels(apiKey, baseUrl)
 			} else {
+				models = {}
+			}
+			break
+		case "flow":
+			// Parse flow config from JSON string
+			try {
+				if (apiKey) {
+					const flowConfig = JSON.parse(apiKey)
+					models = await getFlowModels(
+						flowConfig.tenant,
+						flowConfig.clientId,
+						flowConfig.clientSecret,
+						flowConfig.baseUrl,
+					)
+				} else {
+					models = {}
+				}
+			} catch (error) {
+				console.error(`[getModels] Error parsing Flow config: ${error}`)
 				models = {}
 			}
 			break

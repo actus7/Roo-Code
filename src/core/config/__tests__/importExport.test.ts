@@ -1,6 +1,6 @@
 // npx jest src/core/config/__tests__/importExport.test.ts
 
-import fs from "fs/promises"
+import { readFile, mkdir, writeFile } from "fs/promises"
 import * as path from "path"
 
 import * as vscode from "vscode"
@@ -82,7 +82,7 @@ describe("importExport", () => {
 				canSelectMany: false,
 			})
 
-			expect(fs.readFile).not.toHaveBeenCalled()
+			expect(readFile).not.toHaveBeenCalled()
 			expect(mockProviderSettingsManager.import).not.toHaveBeenCalled()
 			expect(mockContextProxy.setValues).not.toHaveBeenCalled()
 		})
@@ -98,7 +98,7 @@ describe("importExport", () => {
 				globalSettings: { mode: "code", autoApprovalEnabled: true },
 			})
 
-			;(fs.readFile as jest.Mock).mockResolvedValue(mockFileContent)
+			;(readFile as jest.Mock).mockResolvedValue(mockFileContent)
 
 			const previousProviderProfiles = {
 				currentApiConfigName: "default",
@@ -121,7 +121,7 @@ describe("importExport", () => {
 			})
 
 			expect(result.success).toBe(true)
-			expect(fs.readFile).toHaveBeenCalledWith("/mock/path/settings.json", "utf-8")
+			expect(readFile).toHaveBeenCalledWith("/mock/path/settings.json", "utf-8")
 			expect(mockProviderSettingsManager.export).toHaveBeenCalled()
 
 			expect(mockProviderSettingsManager.import).toHaveBeenCalledWith({
@@ -148,7 +148,7 @@ describe("importExport", () => {
 				globalSettings: {},
 			})
 
-			;(fs.readFile as jest.Mock).mockResolvedValue(mockInvalidContent)
+			;(readFile as jest.Mock).mockResolvedValue(mockInvalidContent)
 
 			const result = await importSettings({
 				providerSettingsManager: mockProviderSettingsManager,
@@ -157,7 +157,7 @@ describe("importExport", () => {
 			})
 
 			expect(result).toEqual({ success: false, error: "[providerProfiles.currentApiConfigName]: Required" })
-			expect(fs.readFile).toHaveBeenCalledWith("/mock/path/settings.json", "utf-8")
+			expect(readFile).toHaveBeenCalledWith("/mock/path/settings.json", "utf-8")
 			expect(mockProviderSettingsManager.import).not.toHaveBeenCalled()
 			expect(mockContextProxy.setValues).not.toHaveBeenCalled()
 		})
@@ -172,7 +172,7 @@ describe("importExport", () => {
 				},
 			})
 
-			;(fs.readFile as jest.Mock).mockResolvedValue(mockFileContent)
+			;(readFile as jest.Mock).mockResolvedValue(mockFileContent)
 
 			const previousProviderProfiles = {
 				currentApiConfigName: "default",
@@ -195,7 +195,7 @@ describe("importExport", () => {
 			})
 
 			expect(result.success).toBe(true)
-			expect(fs.readFile).toHaveBeenCalledWith("/mock/path/settings.json", "utf-8")
+			expect(readFile).toHaveBeenCalledWith("/mock/path/settings.json", "utf-8")
 			expect(mockProviderSettingsManager.export).toHaveBeenCalled()
 			expect(mockProviderSettingsManager.import).toHaveBeenCalledWith({
 				...previousProviderProfiles,
@@ -217,7 +217,7 @@ describe("importExport", () => {
 		it("should return success: false when file content is not valid JSON", async () => {
 			;(vscode.window.showOpenDialog as jest.Mock).mockResolvedValue([{ fsPath: "/mock/path/settings.json" }])
 			const mockInvalidJson = "{ this is not valid JSON }"
-			;(fs.readFile as jest.Mock).mockResolvedValue(mockInvalidJson)
+			;(readFile as jest.Mock).mockResolvedValue(mockInvalidJson)
 
 			const result = await importSettings({
 				providerSettingsManager: mockProviderSettingsManager,
@@ -225,15 +225,18 @@ describe("importExport", () => {
 				customModesManager: mockCustomModesManager,
 			})
 
-			expect(result).toEqual({ success: false, error: "Expected property name or '}' in JSON at position 2" })
-			expect(fs.readFile).toHaveBeenCalledWith("/mock/path/settings.json", "utf-8")
+			expect(result).toEqual({
+				success: false,
+				error: "Expected property name or '}' in JSON at position 2 (line 1 column 3)",
+			})
+			expect(readFile).toHaveBeenCalledWith("/mock/path/settings.json", "utf-8")
 			expect(mockProviderSettingsManager.import).not.toHaveBeenCalled()
 			expect(mockContextProxy.setValues).not.toHaveBeenCalled()
 		})
 
 		it("should return success: false when reading file fails", async () => {
 			;(vscode.window.showOpenDialog as jest.Mock).mockResolvedValue([{ fsPath: "/mock/path/settings.json" }])
-			;(fs.readFile as jest.Mock).mockRejectedValue(new Error("File read error"))
+			;(readFile as jest.Mock).mockRejectedValue(new Error("File read error"))
 
 			const result = await importSettings({
 				providerSettingsManager: mockProviderSettingsManager,
@@ -242,7 +245,7 @@ describe("importExport", () => {
 			})
 
 			expect(result).toEqual({ success: false, error: "File read error" })
-			expect(fs.readFile).toHaveBeenCalledWith("/mock/path/settings.json", "utf-8")
+			expect(readFile).toHaveBeenCalledWith("/mock/path/settings.json", "utf-8")
 			expect(mockProviderSettingsManager.import).not.toHaveBeenCalled()
 			expect(mockContextProxy.setValues).not.toHaveBeenCalled()
 		})
@@ -264,7 +267,7 @@ describe("importExport", () => {
 				},
 			})
 
-			;(fs.readFile as jest.Mock).mockResolvedValue(mockFileContent)
+			;(readFile as jest.Mock).mockResolvedValue(mockFileContent)
 
 			mockContextProxy.export.mockResolvedValue({ mode: "code" })
 
@@ -294,7 +297,7 @@ describe("importExport", () => {
 			globalSettings: { mode: "code", customModes },
 		})
 
-		;(fs.readFile as jest.Mock).mockResolvedValue(mockFileContent)
+		;(readFile as jest.Mock).mockResolvedValue(mockFileContent)
 
 		mockProviderSettingsManager.export.mockResolvedValue({
 			currentApiConfigName: "test",
@@ -333,7 +336,7 @@ describe("importExport", () => {
 
 			expect(mockProviderSettingsManager.export).not.toHaveBeenCalled()
 			expect(mockContextProxy.export).not.toHaveBeenCalled()
-			expect(fs.writeFile).not.toHaveBeenCalled()
+			expect(writeFile).not.toHaveBeenCalled()
 		})
 
 		it("should export settings to the selected file location", async () => {
@@ -363,9 +366,9 @@ describe("importExport", () => {
 
 			expect(mockProviderSettingsManager.export).toHaveBeenCalled()
 			expect(mockContextProxy.export).toHaveBeenCalled()
-			expect(fs.mkdir).toHaveBeenCalledWith("/mock/path", { recursive: true })
+			expect(mkdir).toHaveBeenCalledWith("/mock/path", { recursive: true })
 
-			expect(fs.writeFile).toHaveBeenCalledWith(
+			expect(writeFile).toHaveBeenCalledWith(
 				"/mock/path/roo-code-settings.json",
 				JSON.stringify({ providerProfiles: mockProviderProfiles, globalSettings: mockGlobalSettings }, null, 2),
 				"utf-8",
@@ -384,7 +387,7 @@ describe("importExport", () => {
 			})
 
 			mockContextProxy.export.mockResolvedValue({ mode: "code" })
-			;(fs.writeFile as jest.Mock).mockRejectedValue(new Error("Write error"))
+			;(writeFile as jest.Mock).mockRejectedValue(new Error("Write error"))
 
 			await exportSettings({
 				providerSettingsManager: mockProviderSettingsManager,
@@ -394,8 +397,8 @@ describe("importExport", () => {
 			expect(vscode.window.showSaveDialog).toHaveBeenCalled()
 			expect(mockProviderSettingsManager.export).toHaveBeenCalled()
 			expect(mockContextProxy.export).toHaveBeenCalled()
-			expect(fs.mkdir).toHaveBeenCalledWith("/mock/path", { recursive: true })
-			expect(fs.writeFile).toHaveBeenCalled()
+			expect(mkdir).toHaveBeenCalledWith("/mock/path", { recursive: true })
+			expect(writeFile).toHaveBeenCalled()
 			// The error is caught and the function exits silently.
 		})
 
@@ -411,7 +414,7 @@ describe("importExport", () => {
 			})
 
 			mockContextProxy.export.mockResolvedValue({ mode: "code" })
-			;(fs.mkdir as jest.Mock).mockRejectedValue(new Error("Directory creation error"))
+			;(mkdir as jest.Mock).mockRejectedValue(new Error("Directory creation error"))
 
 			await exportSettings({
 				providerSettingsManager: mockProviderSettingsManager,
@@ -421,8 +424,8 @@ describe("importExport", () => {
 			expect(vscode.window.showSaveDialog).toHaveBeenCalled()
 			expect(mockProviderSettingsManager.export).toHaveBeenCalled()
 			expect(mockContextProxy.export).toHaveBeenCalled()
-			expect(fs.mkdir).toHaveBeenCalled()
-			expect(fs.writeFile).not.toHaveBeenCalled() // Should not be called since mkdir failed.
+			expect(mkdir).toHaveBeenCalled()
+			expect(writeFile).not.toHaveBeenCalled() // Should not be called since mkdir failed.
 		})
 
 		it("should use the correct default save location", async () => {

@@ -15,7 +15,7 @@ import {
 } from "../schemas"
 import { McpServer } from "./mcp"
 import { Mode } from "./modes"
-import { RouterModels } from "./api"
+import { RouterModels, ModelInfo } from "./api"
 
 export type { ProviderSettingsEntry, ToolProgressStatus }
 
@@ -43,6 +43,7 @@ export interface ExtensionMessage {
 		| "commitSearchResults"
 		| "listApiConfig"
 		| "routerModels"
+		| "flowModels"
 		| "openAiModels"
 		| "ollamaModels"
 		| "lmStudioModels"
@@ -89,6 +90,7 @@ export interface ExtensionMessage {
 	}>
 	partialMessage?: ClineMessage
 	routerModels?: RouterModels
+	flowModels?: Record<string, ModelInfo>
 	openAiModels?: string[]
 	ollamaModels?: string[]
 	lmStudioModels?: string[]

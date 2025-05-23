@@ -2,6 +2,7 @@ import { Anthropic } from "@anthropic-ai/sdk"
 import { BetaThinkingConfigParam } from "@anthropic-ai/sdk/resources/beta/messages/index.mjs"
 
 import { ProviderSettings, ModelInfo, ApiHandlerOptions } from "../shared/api"
+import { FlowHandler } from "./providers/flow"
 import { ANTHROPIC_DEFAULT_MAX_TOKENS } from "./providers/constants"
 import { GlamaHandler } from "./providers/glama"
 import { AnthropicHandler } from "./providers/anthropic"
@@ -53,6 +54,8 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 	switch (apiProvider) {
 		case "anthropic":
 			return new AnthropicHandler(options)
+		case "flow":
+			return new FlowHandler(options)
 		case "glama":
 			return new GlamaHandler(options)
 		case "openrouter":

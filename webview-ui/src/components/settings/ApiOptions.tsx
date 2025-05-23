@@ -11,6 +11,7 @@ import {
 	glamaDefaultModelId,
 	unboundDefaultModelId,
 	litellmDefaultModelId,
+	flowDefaultModelId,
 } from "@roo/shared/api"
 
 import { vscode } from "@src/utils/vscode"
@@ -40,6 +41,7 @@ import {
 	Vertex,
 	VSCodeLM,
 	XAI,
+	Flow,
 } from "./providers"
 
 import { MODELS_BY_PROVIDER, PROVIDERS, REASONING_MODELS } from "./constants"
@@ -226,6 +228,11 @@ const ApiOptions = ({
 						setApiConfigurationField("litellmModelId", litellmDefaultModelId)
 					}
 					break
+				case "flow":
+					if (!apiConfiguration.apiModelId) {
+						setApiConfigurationField("apiModelId", flowDefaultModelId)
+					}
+					break
 			}
 
 			setApiConfigurationField("apiProvider", value)
@@ -237,6 +244,7 @@ const ApiOptions = ({
 			apiConfiguration.unboundModelId,
 			apiConfiguration.requestyModelId,
 			apiConfiguration.litellmModelId,
+			apiConfiguration.apiModelId,
 		],
 	)
 
@@ -395,6 +403,14 @@ const ApiOptions = ({
 					apiConfiguration={apiConfiguration}
 					setApiConfigurationField={setApiConfigurationField}
 					routerModels={routerModels}
+				/>
+			)}
+
+			{selectedProvider === "flow" && (
+				<Flow
+					apiConfiguration={apiConfiguration}
+					setApiConfigurationField={setApiConfigurationField}
+					showModelSelector={selectedProviderModels.length === 0}
 				/>
 			)}
 

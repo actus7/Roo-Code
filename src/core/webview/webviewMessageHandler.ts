@@ -279,13 +279,23 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 		case "requestRouterModels":
 			const { apiConfiguration } = await provider.getState()
 
-			const [openRouterModels, requestyModels, glamaModels, unboundModels, litellmModels] = await Promise.all([
-				getModels("openrouter", apiConfiguration.openRouterApiKey),
-				getModels("requesty", apiConfiguration.requestyApiKey),
-				getModels("glama", apiConfiguration.glamaApiKey),
-				getModels("unbound", apiConfiguration.unboundApiKey),
-				getModels("litellm", apiConfiguration.litellmApiKey, apiConfiguration.litellmBaseUrl),
-			])
+			const [openRouterModels, requestyModels, glamaModels, unboundModels, litellmModels, flowRouterModels] =
+				await Promise.all([
+					getModels("openrouter", apiConfiguration.openRouterApiKey),
+					getModels("requesty", apiConfiguration.requestyApiKey),
+					getModels("glama", apiConfiguration.glamaApiKey),
+					getModels("unbound", apiConfiguration.unboundApiKey),
+					getModels("litellm", apiConfiguration.litellmApiKey, apiConfiguration.litellmBaseUrl),
+					getModels(
+						"flow",
+						JSON.stringify({
+							tenant: apiConfiguration.flowTenant,
+							clientId: apiConfiguration.flowClientId,
+							clientSecret: apiConfiguration.flowClientSecret,
+							baseUrl: apiConfiguration.flowBaseUrl,
+						}),
+					),
+				])
 
 			provider.postMessageToWebview({
 				type: "routerModels",
@@ -295,7 +305,29 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 					glama: glamaModels,
 					unbound: unboundModels,
 					litellm: litellmModels,
+					flow: flowRouterModels,
 				},
+			})
+			break
+		case "requestFlowModels":
+			// Extrai a configuração do Flow da mensagem
+			const flowConfig = message.flowConfig || {}
+
+			// Busca os modelos do Flow usando o cache
+			const flowModels = await getModels(
+				"flow",
+				JSON.stringify({
+					tenant: flowConfig.tenant,
+					clientId: flowConfig.clientId,
+					clientSecret: flowConfig.clientSecret,
+					baseUrl: flowConfig.baseUrl || "https://flow.ciandt.com",
+				}),
+			)
+
+			// Envia os modelos para o webview
+			provider.postMessageToWebview({
+				type: "flowModels",
+				flowModels,
 			})
 			break
 		case "requestOpenAiModels":

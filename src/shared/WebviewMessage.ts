@@ -43,6 +43,7 @@ export interface WebviewMessage {
 		| "resetState"
 		| "flushRouterModels"
 		| "requestRouterModels"
+		| "requestFlowModels"
 		| "requestOpenAiModels"
 		| "requestOllamaModels"
 		| "requestLmStudioModels"
@@ -159,6 +160,12 @@ export interface WebviewMessage {
 	hasSystemPromptOverride?: boolean
 	terminalOperation?: "continue" | "abort"
 	historyPreviewCollapsed?: boolean
+	flowConfig?: {
+		tenant?: string
+		clientId?: string
+		clientSecret?: string
+		baseUrl?: string
+	}
 }
 
 export const checkoutDiffPayloadSchema = z.object({

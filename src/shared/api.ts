@@ -2,7 +2,16 @@ import { ModelInfo, ProviderName, ProviderSettings } from "../schemas"
 
 export type { ModelInfo, ProviderName, ProviderSettings }
 
-export type ApiHandlerOptions = Omit<ProviderSettings, "apiProvider" | "id">
+// Valor padrão para o modelo Flow
+export const flowDefaultModelId = "gpt-4o"
+
+// Tornando os campos do Flow opcionais para que não gerem erros de tipo em outros providers
+export type ApiHandlerOptions = Omit<ProviderSettings, "apiProvider" | "id"> & {
+	flowAppToAccess?: string
+	flowAgent?: string
+	flowRequestTimeout?: number
+	flowModelTemperature?: number
+}
 
 // Anthropic
 // https://docs.anthropic.com/en/docs/about-claude/models
@@ -1726,7 +1735,7 @@ export const COMPUTER_USE_MODELS = new Set([
 	"anthropic/claude-3.7-sonnet:thinking",
 ])
 
-const routerNames = ["openrouter", "requesty", "glama", "unbound", "litellm"] as const
+const routerNames = ["openrouter", "requesty", "glama", "unbound", "litellm", "flow"] as const
 
 export type RouterName = (typeof routerNames)[number]
 

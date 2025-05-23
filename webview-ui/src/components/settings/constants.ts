@@ -12,6 +12,7 @@ import {
 	groqModels,
 	chutesModels,
 } from "@roo/shared/api"
+import { flowModels } from "@roo/shared/api/models"
 
 export { REASONING_MODELS, PROMPT_CACHING_MODELS } from "@roo/shared/api"
 
@@ -21,6 +22,7 @@ export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, Mod
 	anthropic: anthropicModels,
 	bedrock: bedrockModels,
 	deepseek: deepSeekModels,
+	flow: flowModels,
 	gemini: geminiModels,
 	mistral: mistralModels,
 	"openai-native": openAiNativeModels,
@@ -39,6 +41,7 @@ export const PROVIDERS = [
 	{ value: "openai", label: "OpenAI Compatible" },
 	{ value: "vertex", label: "GCP Vertex AI" },
 	{ value: "bedrock", label: "Amazon Bedrock" },
+	{ value: "flow", label: "Flow" },
 	{ value: "glama", label: "Glama" },
 	{ value: "vscode-lm", label: "VS Code LM API" },
 	{ value: "mistral", label: "Mistral" },

@@ -30,6 +30,7 @@ type GlobalSettings = {
 							| "groq"
 							| "chutes"
 							| "litellm"
+							| "flow"
 					  )
 					| undefined
 		  }[]
@@ -200,6 +201,7 @@ type ProviderSettings = {
 				| "groq"
 				| "chutes"
 				| "litellm"
+				| "flow"
 		  )
 		| undefined
 	includeMaxTokens?: boolean | undefined
@@ -210,6 +212,17 @@ type ProviderSettings = {
 	rateLimitSeconds?: number | undefined
 	modelMaxTokens?: number | undefined
 	modelMaxThinkingTokens?: number | undefined
+	flowBaseUrl?: string | undefined
+	flowTenant?: string | undefined
+	flowClientId?: string | undefined
+	flowClientSecret?: string | undefined
+	flowAuthBaseUrl?: string | undefined
+	flowAppToAccess?: string | undefined
+	flowAgent?: string | undefined
+	flowRequestTimeout?: number | undefined
+	flowModelId?: string | undefined
+	flowModelTemperature?: number | undefined
+	flowModelMaxTokens?: number | undefined
 	apiModelId?: string | undefined
 	apiKey?: string | undefined
 	anthropicBaseUrl?: string | undefined
@@ -341,6 +354,7 @@ type ProviderSettingsEntry = {
 				| "groq"
 				| "chutes"
 				| "litellm"
+				| "flow"
 		  )
 		| undefined
 }
@@ -593,6 +607,7 @@ type IpcMessage =
 											| "groq"
 											| "chutes"
 											| "litellm"
+											| "flow"
 									  )
 									| undefined
 								includeMaxTokens?: boolean | undefined
@@ -603,6 +618,17 @@ type IpcMessage =
 								rateLimitSeconds?: number | undefined
 								modelMaxTokens?: number | undefined
 								modelMaxThinkingTokens?: number | undefined
+								flowBaseUrl?: string | undefined
+								flowTenant?: string | undefined
+								flowClientId?: string | undefined
+								flowClientSecret?: string | undefined
+								flowAuthBaseUrl?: string | undefined
+								flowAppToAccess?: string | undefined
+								flowAgent?: string | undefined
+								flowRequestTimeout?: number | undefined
+								flowModelId?: string | undefined
+								flowModelTemperature?: number | undefined
+								flowModelMaxTokens?: number | undefined
 								apiModelId?: string | undefined
 								apiKey?: string | undefined
 								anthropicBaseUrl?: string | undefined
@@ -732,6 +758,7 @@ type IpcMessage =
 														| "groq"
 														| "chutes"
 														| "litellm"
+														| "flow"
 												  )
 												| undefined
 									  }[]
@@ -1058,6 +1085,7 @@ type TaskCommand =
 								| "groq"
 								| "chutes"
 								| "litellm"
+								| "flow"
 						  )
 						| undefined
 					includeMaxTokens?: boolean | undefined
@@ -1068,6 +1096,17 @@ type TaskCommand =
 					rateLimitSeconds?: number | undefined
 					modelMaxTokens?: number | undefined
 					modelMaxThinkingTokens?: number | undefined
+					flowBaseUrl?: string | undefined
+					flowTenant?: string | undefined
+					flowClientId?: string | undefined
+					flowClientSecret?: string | undefined
+					flowAuthBaseUrl?: string | undefined
+					flowAppToAccess?: string | undefined
+					flowAgent?: string | undefined
+					flowRequestTimeout?: number | undefined
+					flowModelId?: string | undefined
+					flowModelTemperature?: number | undefined
+					flowModelMaxTokens?: number | undefined
 					apiModelId?: string | undefined
 					apiKey?: string | undefined
 					anthropicBaseUrl?: string | undefined
@@ -1197,6 +1236,7 @@ type TaskCommand =
 											| "groq"
 											| "chutes"
 											| "litellm"
+											| "flow"
 									  )
 									| undefined
 						  }[]

@@ -1,0 +1,37 @@
+{
+	"id": "chatcmpl-789",
+	"object": "chat.completion",
+	"created": 1700000002,
+	"choices": [
+		{
+			"index": 0,
+			"message": {
+				"role": "assistant",
+				"content": "Esta é uma resposta de teste do Amazon Bedrock"
+			}
+		}
+	],
+	"provider": "bedrock",
+	"model": "anthropic.claude-v2",
+	"temperature": 0.9,
+	"content": "Esta é uma resposta de teste do Amazon Bedrock",
+	"usage": {
+		"promptTokens": 45,
+		"completionTokens": 28,
+		"totalTokens": 73
+	},
+	"contentFilters": [
+		{
+			"type": "toxic",
+			"score": 0.02
+		},
+		{
+			"type": "profanity",
+			"score": 0.01
+		}
+	],
+	"metadata": {
+		"requestId": "def-456",
+		"modelVersion": "2.1"
+	}
+}
