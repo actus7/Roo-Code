@@ -1,0 +1,305 @@
+### Configurações Globais
+# NOTA: Configure as variáveis de ambiente no arquivo .env do projeto:
+# FLOW_BASE_URL, FLOW_TENANT, FLOW_CLIENT_ID, FLOW_CLIENT_SECRET, FLOW_APP_TO_ACCESS
+@baseUrl = {{$dotenv FLOW_BASE_URL}}
+@flowTenant = {{$dotenv FLOW_TENANT}}
+@clientId = {{$dotenv FLOW_CLIENT_ID}}
+@clientSecret = {{$dotenv FLOW_CLIENT_SECRET}}
+@appToAccess = {{$dotenv FLOW_APP_TO_ACCESS}}
+@agent = test-script
+
+### 1. Gerar token de autenticação
+# @name auth
+POST {{baseUrl}}/auth-engine-api/v1/api-key/token
+Content-Type: application/json
+Accept: application/json
+FlowTenant: {{flowTenant}}
+
+{
+    "clientId": "{{clientId}}",
+    "clientSecret": "{{clientSecret}}",
+    "appToAccess": "{{appToAccess}}"
+}
+
+### Definir token para as próximas requisições
+@token = {{auth.response.body.access_token}}
+
+### 2. Listar Modelos - Azure OpenAI
+GET {{baseUrl}}/ai-orchestration-api/v1/models/azure-openai?capabilities=system-instruction,chat-conversation
+Accept: application/json
+FlowTenant: {{flowTenant}}
+Authorization: Bearer {{token}}
+
+### 3. Listar Modelos - Google Gemini
+GET {{baseUrl}}/ai-orchestration-api/v1/models/google-gemini?capabilities=system-instruction,chat-conversation
+Accept: application/json
+FlowTenant: {{flowTenant}}
+Authorization: Bearer {{token}}
+
+### 4. Listar Modelos - Amazon Bedrock
+GET {{baseUrl}}/ai-orchestration-api/v1/models/amazon-bedrock?capabilities=system-instruction,chat-conversation
+Accept: application/json
+FlowTenant: {{flowTenant}}
+Authorization: Bearer {{token}}
+
+### Azure OpenAI - Chat GPT-4O
+POST {{baseUrl}}/ai-orchestration-api/v1/openai/chat/completions
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{token}}
+FlowAgent: {{agent}}
+FlowTenant: {{flowTenant}}
+
+{
+    "model": "gpt-4o",
+    "messages": [
+        {
+            "content": "You are a helpful assistant.",
+            "role": "assistant"
+        },
+        {
+            "content": "Generate 3 random colors in RGB format",
+            "role": "user"
+        }
+    ]
+}
+
+### Azure OpenAI - Chat GPT-4O Mini
+POST {{baseUrl}}/ai-orchestration-api/v1/openai/chat/completions
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{token}}
+FlowAgent: {{agent}}
+FlowTenant: {{flowTenant}}
+
+{
+    "model": "gpt-4o-mini",
+    "messages": [
+        {
+            "content": "You are a helpful assistant.",
+            "role": "system"
+        },
+        {
+            "content": "Generate 3 random colors in RGB format",
+            "role": "user"
+        }
+    ]
+}
+
+### Azure OpenAI - Chat O3-Mini
+# ⚠️ PROBLEMA CONHECIDO: Este modelo retorna HTTP 503 Service Unavailable
+# Status: Requer tratamento especial ou tem requisitos diferentes da API
+# Removido da lista de modelos até correção
+POST {{baseUrl}}/ai-orchestration-api/v1/openai/chat/completions
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{token}}
+FlowAgent: {{agent}}
+FlowTenant: {{flowTenant}}
+
+{
+    "model": "o3-mini",
+    "messages": [
+        {
+            "content": "You are a helpful assistant.",
+            "role": "assistant"
+        },
+        {
+            "content": "Generate 3 random colors in RGB format",
+            "role": "user"
+        }
+    ]
+}
+
+### Azure OpenAI - O1 mini
+# ⚠️ PROBLEMA CONHECIDO: Este modelo retorna HTTP 503 Service Unavailable
+# Status: Requer tratamento especial ou tem requisitos diferentes da API
+# Removido da lista de modelos até correção
+POST {{baseUrl}}/ai-orchestration-api/v1/openai/chat/completions
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{token}}
+FlowAgent: {{agent}}
+FlowTenant: {{flowTenant}}
+
+{
+    "model": "o1-mini",
+    "messages": [
+        {
+            "content": "You are a helpful assistant.",
+            "role": "assistant"
+        },
+        {
+            "content": "Generate 3 random colors in RGB format",
+            "role": "user"
+        }
+    ]
+}
+
+### Azure OpenAI - GPT-4
+# ✅ MODELO HARDCODED: Funciona mas pode não aparecer na API de listagem
+# Status: Incluído na lista de modelos hardcoded como fallback
+POST {{baseUrl}}/ai-orchestration-api/v1/openai/chat/completions
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{token}}
+FlowAgent: {{agent}}
+FlowTenant: {{flowTenant}}
+
+{
+    "model": "gpt-4",
+    "messages": [
+        {
+            "content": "You are a helpful assistant.",
+            "role": "assistant"
+        },
+        {
+            "content": "Generate 3 random colors in RGB format",
+            "role": "user"
+        }
+    ]
+}
+
+### Google Gemini - 2.0 Flash
+POST {{baseUrl}}/ai-orchestration-api/v1/google/generateContent
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{token}}
+FlowAgent: {{agent}}
+FlowTenant: {{flowTenant}}
+
+{
+    "model": "gemini-2.0-flash",
+    "contents": [
+        {
+            "parts": [
+                {
+                    "text": "You are a helpful assistant."
+                }
+            ],
+            "role": "assistant"
+        },
+        {
+            "parts": [
+                {
+                    "text": "Generate 3 random colors in RGB format"
+                }
+            ],
+            "role": "user"
+        }
+    ]
+}
+
+### Google Gemini - 2.5 Pro
+POST {{baseUrl}}/ai-orchestration-api/v1/google/generateContent
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{token}}
+FlowAgent: {{agent}}
+FlowTenant: {{flowTenant}}
+
+{
+    "model": "gemini-2.5-pro",
+    "contents": [
+        {
+            "parts": [
+                {
+                    "text": "You are a helpful assistant."
+                }
+            ],
+            "role": "assistant"
+        },
+        {
+            "parts": [
+                {
+                    "text": "Generate 3 random colors in RGB format"
+                }
+            ],
+            "role": "user"
+        }
+    ]
+}
+
+### Amazon Bedrock - Claude 3 Sonnet
+POST {{baseUrl}}/ai-orchestration-api/v1/bedrock/invoke
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{token}}
+FlowAgent: {{agent}}
+FlowTenant: {{flowTenant}}
+
+{
+    "allowedModels": ["anthropic.claude-3-sonnet"],
+    "anthropic_version": "bedrock-2023-05-31",
+    "max_tokens": 8192,
+    "messages": [
+        {
+            "content": [
+                {
+                    "text": "Generate 3 random colors in RGB format",
+                    "type": "text"
+                }
+            ],
+            "role": "user"
+        }
+    ],
+    "system": "You are a helpful assistant."
+}
+
+### Amazon Bedrock - Claude 3.7 Sonnet
+POST {{baseUrl}}/ai-orchestration-api/v1/bedrock/invoke
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{token}}
+FlowAgent: {{agent}}
+FlowTenant: {{flowTenant}}
+
+{
+    "allowedModels": ["anthropic.claude-37-sonnet"],
+    "anthropic_version": "bedrock-2023-05-31",
+    "max_tokens": 8192,
+    "messages": [
+        {
+            "content": [
+                {
+                    "text": "Generate 3 random colors in RGB format",
+                    "type": "text"
+                }
+            ],
+            "role": "user"
+        }
+    ],
+    "system": "You are a helpful assistant."
+}
+
+### Azure OpenAI - Embeddings (text-embedding-ada-002)
+# ✅ MODELO HARDCODED: Funciona mas pode não aparecer na API de listagem
+# Status: Incluído na lista de modelos hardcoded como fallback
+POST {{baseUrl}}/ai-orchestration-api/v1/openai/embeddings
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{token}}
+FlowAgent: {{agent}}
+FlowTenant: {{flowTenant}}
+
+{
+    "input": "Convert this text to a vector",
+    "user": "flow",
+    "allowedModels": ["text-embedding-ada-002"]
+}
+
+### Azure OpenAI - Embeddings (text-embedding-3-small)
+# ✅ MODELO HARDCODED: Funciona mas pode não aparecer na API de listagem
+# Status: Incluído na lista de modelos hardcoded como fallback
+POST {{baseUrl}}/ai-orchestration-api/v1/openai/embeddings
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{token}}
+FlowAgent: {{agent}}
+FlowTenant: {{flowTenant}}
+
+{
+    "input": "Convert this text to a vector",
+    "user": "flow",
+    "allowedModels": ["text-embedding-3-small"]
+}

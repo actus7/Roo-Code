@@ -1,0 +1,323 @@
+# PRD: Flow Provider - Implementação Completa
+
+## Visão Geral
+Implementar um provider Flow completo e avançado que oferece acesso unificado a múltiplos providers de LLM (Azure OpenAI, Google Gemini, Amazon Bedrock, Azure Foundry) com funcionalidades avançadas de cache, streaming, autenticação automática e interface inteligente.
+
+## Objetivos
+- ✅ Implementar FlowHandler completo com suporte a streaming SSE avançado
+- ✅ Sistema de autenticação automática com renovação de tokens
+- ✅ Interface de seleção de modelos com auto-loading e cache inteligente
+- ✅ Suporte a todos os providers com payload generation específico
+- ✅ Sistema de cache com TTL e invalidação automática
+- ✅ Mapeamento automático de modelos incompatíveis
+- ✅ Backend integration para evitar restrições CSP
+- ✅ Tratamento especial para modelos O1/O3
+- ✅ Request utilities com retry e exponential backoff
+
+## Requisitos Funcionais
+
+### RF001 - Busca de Modelos
+- O sistema deve buscar modelos disponíveis da API Flow usando os endpoints:
+  - `/ai-orchestration-api/v1/models/azure-openai?capabilities=system-instruction,chat-conversation`
+  - `/ai-orchestration-api/v1/models/google-gemini?capabilities=system-instruction,chat-conversation`
+  - `/ai-orchestration-api/v1/models/amazon-bedrock?capabilities=system-instruction,chat-conversation`
+  - `/ai-orchestration-api/v1/models/azure-foundry?capabilities=system-instruction,chat-conversation`
+
+### RF002 - Modelos Hardcoded e Disponíveis
+- Incluir modelos hardcoded que funcionam mas não aparecem nos endpoints:
+  - gpt-4 (Azure OpenAI) - Capacidades: system-instruction, chat-conversation, streaming
+  - text-embedding-ada-002 (Azure OpenAI) - Capacidades: embeddings
+  - text-embedding-3-small (Azure OpenAI) - Capacidades: embeddings
+- Modelos disponíveis via API:
+  - gpt-4o (Azure OpenAI) - 128k tokens
+  - gpt-4o-mini (Azure OpenAI) - 128k tokens
+  - o3-mini (Azure OpenAI) - 200k tokens, reasoning_tokens especiais
+  - gemini-2.0-flash (Google) - 8k tokens
+  - gemini-2.5-pro (Google) - 1M tokens
+  - anthropic.claude-3-sonnet (Bedrock) - 200k tokens
+  - anthropic.claude-37-sonnet (Bedrock) - 200k tokens
+  - amazon.nova-lite, nova-micro, nova-pro (Bedrock)
+  - DeepSeek-R1 (Azure Foundry)
+
+### RF003 - Interface de Seleção Avançada
+- ✅ FlowModelSelector com auto-loading quando credenciais estão configuradas
+- ✅ Cache visual com indicadores de status (loading, cache, erro)
+- ✅ Posicionado acima do checkbox "Ocultar campos opcionais"
+- ✅ Mapeamento automático de modelos Anthropic incompatíveis para equivalentes Flow
+- ✅ Botão de refresh manual para forçar atualização
+- ✅ Validação de modelos selecionados com fallback inteligente
+- ✅ Flag hasAttemptedAutoLoad para evitar double mount
+
+### RF004 - Sistema de Autenticação Automática
+- ✅ TokenManager com renovação automática 1 minuto antes do vencimento
+- ✅ Cache de token em memória durante validade
+- ✅ Headers específicos: FlowTenant, FlowAgent, Authorization Bearer
+- ✅ Retry automático em caso de falhas de autenticação
+- ✅ Endpoint: /auth-engine-api/v1/api-key/token
+
+### RF005 - Sistema de Cache Inteligente
+- ✅ FlowModelCache com TTL de 60 minutos configurável
+- ✅ Invalidação automática baseada em hash de configuração
+- ✅ Suporte a localStorage e sessionStorage
+- ✅ Ferramentas de debug no console (FlowModelCacheDebug)
+- ✅ Limpeza automática de entradas expiradas
+
+### RF006 - Tratamento de Erros Robusto
+- ✅ Fallback para modelos hardcoded em caso de falha na API
+- ✅ Try-catch silencioso com logging para debug
+- ✅ Exponential backoff com jitter para evitar thundering herd
+- ✅ Timeout configurável com Promise.race
+- ✅ Retry automático com Retry-After header para rate limiting
+
+### RF007 - Streaming SSE Avançado
+- ✅ Sistema de buffer para chunks fragmentados
+- ✅ Algoritmo duplo de extração: regex + line-by-line fallback
+- ✅ Headers específicos: Cache-Control: no-cache, Connection: keep-alive
+- ✅ TextDecoder com stream: true para chunks fragmentados
+- ✅ Transformação específica por provider (OpenAI, Gemini, Bedrock)
+- ✅ Fallback para buffer final em streams
+
+### RF008 - Tratamento Especial O1/O3
+- ✅ Detecção automática de modelos O1/O3 (includes 'o1-' ou 'o3-')
+- ✅ Remoção automática de temperature (não suportado)
+- ✅ Merge de system messages para Azure OpenAI
+- ✅ Suporte a reasoning_tokens especiais (O3)
+- ✅ Logging detalhado para debugging
+
+### RF009 - Backend Integration
+- ✅ Handlers testFlowConnection e fetchFlowModels
+- ✅ Import dinâmico dos módulos Flow
+- ✅ Comunicação via postMessage para evitar CSP do VSCode
+- ✅ Validação de configuração no backend
+- ✅ Tratamento de erros robusto com fallback
+
+## Requisitos Técnicos
+
+### RT001 - Estrutura de Dados Completa
+- ✅ Interfaces TypeScript para todos os providers:
+  ```typescript
+  interface FlowModel {
+    id: string;
+    name: string;
+    provider: FlowProvider;
+    capabilities: string[];
+    inputTokens?: number;
+    family?: string;
+    description?: string;
+  }
+
+  interface ModelOption {
+    value: string;
+    label: string;
+    provider: string;
+  }
+  ```
+
+### RT002 - Serviços Implementados
+- ✅ TokenManager - Autenticação automática com renovação
+- ✅ FlowModelService - Busca multi-provider com cache e fallback
+- ✅ FlowModelCache - Cache inteligente com TTL e invalidação
+- ✅ PayloadGenerator - Geração específica por provider
+- ✅ RequestUtils - Utilities com retry e timeout
+
+### RT003 - Componentes Completos
+- ✅ Flow.tsx - Componente principal de configuração
+- ✅ FlowModelSelector.tsx - Seletor avançado com auto-load
+- ✅ useFlowModelCache.ts - Hook para gerenciamento de cache
+- ✅ Backend handlers - testFlowConnection, fetchFlowModels
+
+## Especificações de Interface
+
+### Layout Implementado
+- ✅ Campo "Modelo": FlowModelSelector com dropdown inteligente
+- ✅ Posição: Acima do checkbox "Ocultar campos opcionais"
+- ✅ Formato: "Model Name (Provider)" com informações de contexto
+- ✅ Indicadores visuais: loading, cache, erro
+- ✅ Botão refresh manual para atualização forçada
+
+### Comportamento Avançado
+- ✅ Auto-loading quando credenciais Flow estão configuradas
+- ✅ Cache visual com indicação de idade dos dados
+- ✅ Mapeamento automático de modelos incompatíveis
+- ✅ Validação em tempo real de modelos selecionados
+- ✅ Fallback inteligente para modelos hardcoded
+- ✅ Persistência na configuração com validação
+
+## Critérios de Aceitação
+
+### CA001 - Sistema de Modelos Avançado
+- ✅ FlowModelService busca de todos os providers simultaneamente
+- ✅ Inclui modelos hardcoded com fallback automático
+- ✅ Deduplicação baseada no ID do modelo
+- ✅ Cache com TTL de 60 minutos e invalidação inteligente
+- ✅ Formatação para UI com informações de contexto
+
+### CA002 - Interface Inteligente
+- ✅ FlowModelSelector com auto-loading e cache visual
+- ✅ Posicionamento correto acima do checkbox opcional
+- ✅ Indicadores de status (loading, cache, erro)
+- ✅ Mapeamento automático de modelos incompatíveis
+- ✅ Botão refresh manual e validação em tempo real
+
+### CA003 - Funcionalidade Robusta
+- ✅ TokenManager com renovação automática (1min safety margin)
+- ✅ Backend integration via postMessage (evita CSP)
+- ✅ Streaming SSE com algoritmo duplo de extração
+- ✅ Tratamento especial O1/O3 (sem temperature, merge system)
+- ✅ Request utils com retry, timeout e exponential backoff
+
+### CA004 - Debug e Monitoramento
+- ✅ FlowModelCacheDebug tools no console
+- ✅ Logging estruturado para troubleshooting
+- ✅ Métricas de cache (age, TTL, hit/miss)
+- ✅ Scripts de teste (test-flow-api.sh, debug-models.js)
+- ✅ Tratamento de erros com fallback silencioso
+
+## Considerações Técnicas
+
+### Segurança Implementada
+- ✅ Credenciais nunca expostas no frontend
+- ✅ Backend handlers para todas as requisições Flow
+- ✅ TokenManager com renovação automática segura
+- ✅ Validação de configuração no backend
+- ✅ Headers específicos para autenticação (FlowTenant, Authorization)
+
+### Performance Otimizada
+- ✅ Cache inteligente com TTL de 60 minutos
+- ✅ Auto-loading com flag para evitar duplicação
+- ✅ Promise.allSettled para busca paralela de providers
+- ✅ Debounce implícito via hasAttemptedAutoLoad
+- ✅ Loading states e indicadores visuais apropriados
+
+### Compatibilidade Garantida
+- ✅ Mantém compatibilidade total com configurações existentes
+- ✅ Fallback para modelos hardcoded preserva funcionalidade
+- ✅ Mapeamento automático para modelos incompatíveis
+- ✅ Suporte a múltiplas versões da API Flow
+- ✅ Integração não-invasiva com sistema existente
+
+## Arquivos Implementados
+
+### Core Files
+- ✅ `src/api/providers/flow.ts` - FlowHandler principal
+- ✅ `src/api/providers/flow/auth.ts` - TokenManager
+- ✅ `src/api/providers/flow/config.ts` - Configurações e constantes
+- ✅ `src/api/providers/flow/model-service.ts` - FlowModelService
+- ✅ `src/api/providers/flow/model-utils.ts` - Utilitários de modelos
+- ✅ `src/api/providers/flow/payload-generator.ts` - Geração de payloads
+- ✅ `src/api/providers/flow/request-utils.ts` - Utilitários HTTP
+- ✅ `src/api/providers/flow/types.ts` - Definições TypeScript
+- ✅ `src/api/providers/flow/utils.ts` - Utilitários gerais
+
+### UI Components
+- ✅ `webview-ui/src/components/settings/providers/Flow.tsx`
+- ✅ `webview-ui/src/components/settings/providers/FlowModelSelector.tsx`
+- ✅ `webview-ui/src/utils/flowModelCache.ts`
+- ✅ `webview-ui/src/hooks/useFlowModelCache.ts`
+
+### Backend Integration
+- ✅ `src/core/webview/webviewMessageHandler.ts` - Handlers testFlowConnection, fetchFlowModels
+
+### Tests and Scripts
+- ✅ `Provider Flow/test-flow-api.http` - Exemplos de API
+- ✅ `Provider Flow/test-flow-api.sh` - Script de teste completo
+- ✅ `Provider Flow/test-flow-models-api.sh` - Teste de modelos
+- ✅ `Provider Flow/debug-models.js` - Debug específico
+- ✅ `webview-ui/src/utils/__tests__/flowModelCache.test.ts`
+
+## Referências Técnicas
+- ✅ Provider Flow/FLOW.md - Documentação completa
+- ✅ Provider Flow/Flow Provider Implementation Guide.md - Guia técnico
+- ✅ API Flow da CI&T - Endpoints e autenticação
+- ✅ Scripts de teste para validação
+
+## Riscos e Mitigações
+
+### Riscos Técnicos - RESOLVIDOS
+- ✅ **Autenticação**: TokenManager com renovação automática implementado
+- ✅ **Rate Limiting**: Exponential backoff com jitter implementado
+- ✅ **Compatibilidade**: PayloadGenerator específico por provider implementado
+- ✅ **Streaming**: Algoritmo duplo de extração SSE implementado
+- ✅ **Cache**: Sistema inteligente com invalidação automática implementado
+
+### Riscos de Integração - RESOLVIDOS
+- ✅ **Breaking Changes**: Integração não-invasiva mantém compatibilidade
+- ✅ **Performance**: Cache e otimizações implementadas
+- ✅ **Manutenibilidade**: Código modularizado e bem documentado
+- ✅ **CSP Restrictions**: Backend integration via postMessage implementada
+- ✅ **Double Mount**: Flag hasAttemptedAutoLoad resolve problema
+
+## Status de Implementação
+
+### ✅ FASE 1: Core Implementation - COMPLETA
+- ✅ FlowHandler com streaming SSE avançado
+- ✅ TokenManager com renovação automática
+- ✅ Sistema de configuração robusto
+- ✅ Tipos TypeScript completos
+
+### ✅ FASE 2: Provider Support - COMPLETA
+- ✅ Suporte a todos os providers (Azure OpenAI, Gemini, Bedrock, Foundry)
+- ✅ PayloadGenerator específico com tratamento O1/O3
+- ✅ Transformadores de resposta por provider
+- ✅ Sistema de embeddings integrado
+
+### ✅ FASE 3: Interface & Integration - COMPLETA
+- ✅ FlowModelSelector com auto-loading
+- ✅ Sistema de cache visual
+- ✅ Backend integration completa
+- ✅ Testes e scripts de validação
+- ✅ Debug utilities implementadas
+
+## Dependências
+
+### Internas - ATENDIDAS
+- ✅ Sistema de providers existente - Integração completa
+- ✅ Tipos TypeScript do projeto - Tipos específicos implementados
+- ✅ Interface de configuração - FlowModelSelector integrado
+- ✅ Sistema de streaming - SSE avançado implementado
+- ✅ Backend webview handlers - testFlowConnection, fetchFlowModels
+
+### Externas - CONFIGURADAS
+- ✅ API Flow da CI&T - Endpoints mapeados e funcionais
+- ✅ Credenciais de acesso - Sistema de autenticação implementado
+- ✅ Conectividade de rede - Request utils com retry implementados
+
+## Métricas de Sucesso - ALCANÇADAS
+
+1. ✅ **Funcionalidade**: 100% dos endpoints implementados e funcionais
+   - Todos os providers suportados (Azure OpenAI, Gemini, Bedrock, Foundry)
+   - Sistema de embeddings integrado
+   - Streaming SSE com algoritmo duplo
+
+2. ✅ **Compatibilidade**: 0 breaking changes na arquitetura existente
+   - Integração não-invasiva mantém funcionalidades existentes
+   - Mapeamento automático de modelos incompatíveis
+   - Fallback para modelos hardcoded
+
+3. ✅ **Performance**: Otimizações implementadas
+   - Cache inteligente com TTL de 60 minutos
+   - Auto-loading com prevenção de duplicação
+   - Request paralelo com Promise.allSettled
+
+4. ✅ **Usabilidade**: Interface intuitiva implementada
+   - Auto-loading quando credenciais configuradas
+   - Indicadores visuais de status
+   - Botão refresh manual e validação em tempo real
+
+5. ✅ **Confiabilidade**: Sistema robusto implementado
+   - TokenManager com renovação automática
+   - Exponential backoff com jitter
+   - Fallback silencioso para modelos hardcoded
+   - Debug utilities para troubleshooting
+
+## Conclusão
+
+O Flow Provider está **100% IMPLEMENTADO** com todas as funcionalidades avançadas:
+- Sistema completo de autenticação e cache
+- Interface inteligente com auto-loading
+- Suporte robusto a streaming e múltiplos providers
+- Tratamento especial para modelos O1/O3
+- Debug utilities e monitoramento completo
+- Integração não-invasiva com sistema existente
+
+**Status: PRONTO PARA PRODUÇÃO** ✅

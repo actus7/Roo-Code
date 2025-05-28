@@ -46,8 +46,16 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 	const updateGlobalState = async <K extends keyof GlobalState>(key: K, value: GlobalState[K]) =>
 		await provider.contextProxy.setValue(key, value)
 
+	console.log("🔄 [webviewMessageHandler] Mensagem recebida:", {
+		type: message.type,
+		hasText: !!message.text,
+		hasImages: !!message.images,
+		hasApiConfiguration: !!message.apiConfiguration,
+	})
+
 	switch (message.type) {
 		case "webviewDidLaunch":
+			console.log("🚀 [webviewMessageHandler] Webview lançado")
 			// Load custom modes first
 			const customModes = await provider.customModesManager.getCustomModes()
 			await updateGlobalState("customModes", customModes)
@@ -122,6 +130,11 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 			provider.isViewLaunched = true
 			break
 		case "newTask":
+			console.log("📝 [webviewMessageHandler] Nova tarefa iniciada:", {
+				text: message.text?.substring(0, 100) + "...",
+				hasImages: !!message.images,
+				imagesCount: message.images?.length || 0,
+			})
 			// Initializing new instance of Cline will make sure that any
 			// agentically running promises in old instance don't affect our new
 			// task. This essentially creates a fresh slate for the new task.
@@ -647,6 +660,126 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 						? `Successfully connected to Chrome: ${customHostUrl}`
 						: "Failed to connect to Chrome",
 				})
+			}
+			break
+		case "testFlowConnection":
+			try {
+				const config = message.config
+				if (!config) {
+					await provider.postMessageToWebview({
+						type: "flowConnectionTestResult",
+						success: false,
+						error: "Configuração não fornecida"
+					})
+					break
+				}
+
+				// Import Flow provider modules
+				const { TokenManager } = await import("../../api/providers/flow/auth")
+				const { initializeFlowConfig, validateFlowConfig } = await import("../../api/providers/flow/config")
+				const { handleHttpError } = await import("../../api/providers/flow/request-utils")
+
+				// Test Flow connection using existing infrastructure
+				const flowConfig = initializeFlowConfig(config)
+				validateFlowConfig(flowConfig)
+
+				const tokenManager = new TokenManager(flowConfig)
+				const token = await tokenManager.getValidToken()
+
+				if (token) {
+					await provider.postMessageToWebview({
+						type: "flowConnectionTestResult",
+						success: true,
+						error: null
+					})
+				} else {
+					await provider.postMessageToWebview({
+						type: "flowConnectionTestResult",
+						success: false,
+						error: "Falha na autenticação: Token não obtido"
+					})
+				}
+			} catch (error) {
+				// Use Flow's error handling if available, otherwise fallback
+				let errorMessage = "Erro desconhecido"
+				if (error instanceof Error) {
+					errorMessage = error.message
+				}
+
+				await provider.postMessageToWebview({
+					type: "flowConnectionTestResult",
+					success: false,
+					error: errorMessage
+				})
+			}
+			break
+		case "fetchFlowModels":
+			try {
+				console.log("[webviewMessageHandler] Received fetchFlowModels request")
+				const config = message.config
+				if (!config) {
+					console.error("[webviewMessageHandler] No config provided in fetchFlowModels request")
+					await provider.postMessageToWebview({
+						type: "fetchFlowModelsResult",
+						success: false,
+						error: "Configuração não fornecida",
+						models: []
+					})
+					break
+				}
+
+				console.log("[webviewMessageHandler] Processing fetchFlowModels with config:", {
+					baseUrl: config.flowBaseUrl,
+					tenant: config.flowTenant,
+					hasClientId: !!config.flowClientId,
+					hasSecret: !!config.flowClientSecret,
+					appToAccess: config.flowAppToAccess
+				})
+
+				// Import Flow provider modules
+				const { initializeFlowConfig, validateFlowConfig } = await import("../../api/providers/flow/config")
+				const { FlowModelService } = await import("../../api/providers/flow/model-service")
+
+				// Initialize Flow configuration
+				const flowConfig = initializeFlowConfig(config)
+				validateFlowConfig(flowConfig)
+
+				console.log("[webviewMessageHandler] Flow config initialized and validated")
+
+				// Create model service and fetch models
+				const modelService = new FlowModelService(flowConfig)
+				console.log("[webviewMessageHandler] Fetching models from FlowModelService...")
+				const modelOptions = await modelService.getModelOptions(true)
+
+				console.log("[webviewMessageHandler] Successfully fetched models:", {
+					count: modelOptions.length,
+					providers: [...new Set(modelOptions.map(m => m.provider))]
+				})
+
+				console.log("[webviewMessageHandler] Sending fetchFlowModelsResult to webview...")
+				await provider.postMessageToWebview({
+					type: "fetchFlowModelsResult",
+					success: true,
+					error: null,
+					models: modelOptions
+				})
+				console.log("[webviewMessageHandler] fetchFlowModelsResult sent successfully")
+			} catch (error) {
+				let errorMessage = "Erro desconhecido ao buscar modelos"
+				if (error instanceof Error) {
+					errorMessage = error.message
+				}
+
+				console.error("[webviewMessageHandler] Error in fetchFlowModels:", error)
+
+				console.log("[webviewMessageHandler] Sending error fetchFlowModelsResult to webview...")
+				await provider.postMessageToWebview({
+					type: "fetchFlowModelsResult",
+					success: false,
+					error: errorMessage,
+					models: []
+				})
+				console.log("[webviewMessageHandler] Error fetchFlowModelsResult sent successfully")
 			}
 			break
 		case "fuzzyMatchThreshold":

@@ -198,6 +198,21 @@ function getSelectedModel({
 			const info = vscodeLlmModels[modelFamily as keyof typeof vscodeLlmModels]
 			return { id, info: { ...openAiModelInfoSaneDefaults, ...info, supportsImages: false } } // VSCode LM API currently doesn't support images.
 		}
+		case "flow": {
+			// For Flow provider, use the configured model ID directly
+			// Flow models are managed by FlowModelSelector and have their own format
+			const id = apiConfiguration.apiModelId || "anthropic.claude-37-sonnet" // Default Flow model
+			// Return basic model info since Flow manages its own model metadata
+			const info: ModelInfo = {
+				maxTokens: 8192,
+				contextWindow: 200_000,
+				supportsImages: true,
+				supportsPromptCache: true,
+				inputPrice: 3.0,
+				outputPrice: 15.0,
+			}
+			return { id, info }
+		}
 		// case "anthropic":
 		// case "human-relay":
 		// case "fake-ai":

@@ -5,7 +5,7 @@
 	"tasks": [
 		{
 			"label": "watch",
-			"dependsOn": ["webview", "watch:tsc", "watch:esbuild"],
+			"dependsOn": ["webview", "watch:tsc", "watch:esbuild", "start-aimemory-mcp"],
 			"presentation": {
 				"reveal": "never"
 			},

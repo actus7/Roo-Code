@@ -25,6 +25,7 @@ import {
 	Bedrock,
 	Chutes,
 	DeepSeek,
+	Flow,
 	Gemini,
 	Glama,
 	Groq,
@@ -391,6 +392,10 @@ const ApiOptions = ({
 
 			{selectedProvider === "litellm" && (
 				<LiteLLM apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
+			)}
+
+			{selectedProvider === "flow" && (
+				<Flow apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
 			)}
 
 			{selectedProvider === "human-relay" && (

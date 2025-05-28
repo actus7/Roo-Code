@@ -486,6 +486,15 @@ export class ClineProvider
 			>
 		> = {},
 	) {
+		console.log("🎯 [ClineProvider] initClineWithTask iniciado:", {
+			hasTask: !!task,
+			taskLength: task?.length || 0,
+			hasImages: !!images,
+			imagesCount: images?.length || 0,
+			hasParentTask: !!parentTask,
+			stackLength: this.clineStack.length,
+		})
+
 		const {
 			apiConfiguration,
 			diffEnabled: enableDiff,
@@ -493,6 +502,17 @@ export class ClineProvider
 			fuzzyMatchThreshold,
 			experiments,
 		} = await this.getState()
+
+		console.log("⚙️ [ClineProvider] Configuração obtida:", {
+			apiProvider: apiConfiguration.apiProvider,
+			apiModelId: apiConfiguration.apiModelId,
+			hasApiKey: !!apiConfiguration.apiKey,
+			hasFlowTenant: !!(apiConfiguration as any).flowTenant,
+			hasFlowClientId: !!(apiConfiguration as any).flowClientId,
+			hasFlowClientSecret: !!(apiConfiguration as any).flowClientSecret,
+			enableDiff,
+			enableCheckpoints,
+		})
 
 		const cline = new Task({
 			provider: this,
@@ -511,6 +531,12 @@ export class ClineProvider
 		})
 
 		await this.addClineToStack(cline)
+
+		console.log("✅ [ClineProvider] Task criada e adicionada ao stack:", {
+			taskId: cline.taskId,
+			instanceId: cline.instanceId,
+			isParent: !cline.parentTask,
+		})
 
 		this.log(
 			`[subtasks] ${cline.parentTask ? "child" : "parent"} task ${cline.taskId}.${cline.instanceId} instantiated`,

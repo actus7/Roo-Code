@@ -142,6 +142,10 @@ export interface WebviewMessage {
 		| "indexingStatusUpdate"
 		| "indexCleared"
 		| "codebaseIndexConfig"
+		| "testFlowConnection"
+		| "flowConnectionTestResult"
+		| "fetchFlowModels"
+		| "fetchFlowModelsResult"
 	text?: string
 	disabled?: boolean
 	askResponse?: ClineAskResponse
@@ -171,6 +175,10 @@ export interface WebviewMessage {
 	hasSystemPromptOverride?: boolean
 	terminalOperation?: "continue" | "abort"
 	historyPreviewCollapsed?: boolean
+	config?: any
+	success?: boolean
+	error?: string
+	models?: Array<{ value: string; label: string; provider: string }>
 }
 
 export const checkoutDiffPayloadSchema = z.object({

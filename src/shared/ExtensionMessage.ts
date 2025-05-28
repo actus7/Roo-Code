@@ -70,6 +70,8 @@ export interface ExtensionMessage {
 		| "indexingStatusUpdate"
 		| "indexCleared"
 		| "codebaseIndexConfig"
+		| "flowConnectionTestResult"
+		| "fetchFlowModelsResult"
 	text?: string
 	action?:
 		| "chatButtonClicked"
@@ -108,6 +110,7 @@ export interface ExtensionMessage {
 	error?: string
 	setting?: string
 	value?: any
+	models?: Array<{ value: string; label: string; provider: string }>
 }
 
 export type ExtensionState = Pick<

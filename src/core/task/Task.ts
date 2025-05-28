@@ -226,7 +226,22 @@ export class Task extends EventEmitter<ClineEvents> {
 		})
 
 		this.apiConfiguration = apiConfiguration
+
+		console.log("🔧 [Task] Construindo API handler:", {
+			apiProvider: apiConfiguration.apiProvider,
+			apiModelId: apiConfiguration.apiModelId,
+			hasApiKey: !!apiConfiguration.apiKey,
+			hasFlowTenant: !!(apiConfiguration as any).flowTenant,
+			hasFlowClientId: !!(apiConfiguration as any).flowClientId,
+			hasFlowClientSecret: !!(apiConfiguration as any).flowClientSecret,
+		})
+
 		this.api = buildApiHandler(apiConfiguration)
+
+		console.log("✅ [Task] API handler criado:", {
+			handlerType: this.api.constructor.name,
+			modelInfo: this.api.getModel(),
+		})
 
 		this.urlContentFetcher = new UrlContentFetcher(provider.context)
 		this.browserSession = new BrowserSession(provider.context)
