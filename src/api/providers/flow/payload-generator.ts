@@ -155,7 +155,7 @@ function generateGeminiPayload(options: FlowChatCompletionOptions, config: FlowC
 		}
 
 		// Gemini uses "model" role instead of "assistant"
-		const role = msg.role === "assistant" ? "model" : "user"
+		const role: "user" | "model" = msg.role === "assistant" ? "model" : "user"
 		let content = typeof msg.content === "string" ? msg.content : msg.content[0]?.text || ""
 
 		// If this is the first user message and we have a system message, prepend it
@@ -223,7 +223,7 @@ function generateBedrockPayload(options: FlowChatCompletionOptions, config: Flow
 			systemMessage = typeof msg.content === "string" ? msg.content : msg.content[0]?.text || ""
 		} else {
 			userMessages.push({
-				role: msg.role === "assistant" ? "assistant" : "user",
+				role: msg.role === "assistant" ? "assistant" as const : "user" as const,
 				content: [
 					{
 						type: "text" as const,

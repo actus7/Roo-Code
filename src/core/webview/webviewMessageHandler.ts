@@ -13,6 +13,9 @@ import { supportPrompt } from "../../shared/support-prompt"
 import { checkoutDiffPayloadSchema, checkoutRestorePayloadSchema, WebviewMessage } from "../../shared/WebviewMessage"
 import { checkExistKey } from "../../shared/checkExistApiConfig"
 import { experimentDefault } from "../../shared/experiments"
+import { ValidationPipeline } from "../../shared/validation/validator"
+import { webviewMessageBaseSchema, terminalOperationMessageSchema } from "../../shared/validation/webview-schemas"
+import { TerminalCommandValidator } from "../../integrations/terminal/command-validator"
 import { Terminal } from "../../integrations/terminal/Terminal"
 import { openFile, openImage } from "../../integrations/misc/open-file"
 import { selectImages } from "../../integrations/misc/process-images"
@@ -41,6 +44,23 @@ import { getCommand } from "../../utils/commands"
 const ALLOWED_VSCODE_SETTINGS = new Set(["terminal.integrated.inheritEnv"])
 
 export const webviewMessageHandler = async (provider: ClineProvider, message: WebviewMessage) => {
+	// Validação básica da mensagem
+	const validation = ValidationPipeline.validate(webviewMessageBaseSchema, message, {
+		context: 'webview_message_handler'
+	})
+
+	if (!validation.success) {
+		console.error("❌ [webviewMessageHandler] Mensagem inválida:", {
+			errors: validation.errors,
+			messageType: message?.type,
+			message: message
+		})
+
+		// Log para telemetria se disponível
+		provider.log(`Invalid webview message: ${validation.errors?.map(e => e.message).join(', ')}`)
+		return // Não processa mensagens inválidas
+	}
+
 	// Utility functions provided for concise get/update of global state via contextProxy API.
 	const getGlobalState = <K extends keyof GlobalState>(key: K) => provider.contextProxy.getValue(key)
 	const updateGlobalState = async <K extends keyof GlobalState>(key: K, value: GlobalState[K]) =>
@@ -192,6 +212,45 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 			break
 		case "terminalOperation":
 			if (message.terminalOperation) {
+				// Validar operação de terminal
+				const terminalValidation = ValidationPipeline.validate(
+					terminalOperationMessageSchema,
+					message,
+					{ context: 'terminal_operation' }
+				)
+
+				if (!terminalValidation.success) {
+					console.error("❌ [webviewMessageHandler] Operação de terminal inválida:", {
+						errors: terminalValidation.errors,
+						operation: message.terminalOperation
+					})
+					provider.log(`Invalid terminal operation: ${terminalValidation.errors?.map(e => e.message).join(', ')}`)
+					break
+				}
+
+				// Validar comando se for operação de execução
+				if (message.terminalOperation.type === "run" && message.terminalOperation.command) {
+					const allowedCommands = await provider.context.globalState.get("allowedCommands", [])
+					const commandValidation = TerminalCommandValidator.validateAdvanced(
+						message.terminalOperation.command,
+						allowedCommands
+					)
+
+					if (!commandValidation.success) {
+						console.error("❌ [webviewMessageHandler] Comando de terminal inválido:", {
+							errors: commandValidation.errors,
+							command: message.terminalOperation.command
+						})
+						provider.log(`Invalid terminal command: ${commandValidation.errors?.map(e => e.message).join(', ')}`)
+
+						// Notificar o usuário sobre comando inválido
+						vscode.window.showErrorMessage(
+							`Comando inválido: ${commandValidation.errors?.[0]?.message || 'Comando não permitido'}`
+						)
+						break
+					}
+				}
+
 				provider.getCurrentCline()?.handleTerminalOperation(message.terminalOperation)
 			}
 			break
@@ -690,7 +749,7 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 					await provider.postMessageToWebview({
 						type: "flowConnectionTestResult",
 						success: true,
-						error: null
+						error: undefined
 					})
 				} else {
 					await provider.postMessageToWebview({
@@ -760,7 +819,7 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 				await provider.postMessageToWebview({
 					type: "fetchFlowModelsResult",
 					success: true,
-					error: null,
+					error: undefined,
 					models: modelOptions
 				})
 				console.log("[webviewMessageHandler] fetchFlowModelsResult sent successfully")

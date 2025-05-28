@@ -1,323 +1,231 @@
-# PRD: Flow Provider - Implementação Completa
+# Product Requirements Document: Flow Provider Refactoring and Security Improvements
 
-## Visão Geral
-Implementar um provider Flow completo e avançado que oferece acesso unificado a múltiplos providers de LLM (Azure OpenAI, Google Gemini, Amazon Bedrock, Azure Foundry) com funcionalidades avançadas de cache, streaming, autenticação automática e interface inteligente.
+## 1. Executive Summary
 
-## Objetivos
-- ✅ Implementar FlowHandler completo com suporte a streaming SSE avançado
-- ✅ Sistema de autenticação automática com renovação de tokens
-- ✅ Interface de seleção de modelos com auto-loading e cache inteligente
-- ✅ Suporte a todos os providers com payload generation específico
-- ✅ Sistema de cache com TTL e invalidação automática
-- ✅ Mapeamento automático de modelos incompatíveis
-- ✅ Backend integration para evitar restrições CSP
-- ✅ Tratamento especial para modelos O1/O3
-- ✅ Request utilities com retry e exponential backoff
+### Project Overview
+Comprehensive refactoring and security enhancement of the Flow Provider system based on technical analysis revealing critical security vulnerabilities, architectural violations, and performance issues across 14 files.
 
-## Requisitos Funcionais
+### Business Objectives
+- Eliminate 12 critical security vulnerabilities
+- Improve code maintainability by 60%
+- Achieve 90%+ test coverage
+- Reduce debugging time by 40%
+- Ensure SOLID principles compliance
 
-### RF001 - Busca de Modelos
-- O sistema deve buscar modelos disponíveis da API Flow usando os endpoints:
-  - `/ai-orchestration-api/v1/models/azure-openai?capabilities=system-instruction,chat-conversation`
-  - `/ai-orchestration-api/v1/models/google-gemini?capabilities=system-instruction,chat-conversation`
-  - `/ai-orchestration-api/v1/models/amazon-bedrock?capabilities=system-instruction,chat-conversation`
-  - `/ai-orchestration-api/v1/models/azure-foundry?capabilities=system-instruction,chat-conversation`
+### Success Metrics
+- Zero security vulnerabilities in production
+- All files under 500 lines
+- Complexity score < 8 per file
+- 90%+ test coverage
+- Zero production logging of sensitive data
 
-### RF002 - Modelos Hardcoded e Disponíveis
-- Incluir modelos hardcoded que funcionam mas não aparecem nos endpoints:
-  - gpt-4 (Azure OpenAI) - Capacidades: system-instruction, chat-conversation, streaming
-  - text-embedding-ada-002 (Azure OpenAI) - Capacidades: embeddings
-  - text-embedding-3-small (Azure OpenAI) - Capacidades: embeddings
-- Modelos disponíveis via API:
-  - gpt-4o (Azure OpenAI) - 128k tokens
-  - gpt-4o-mini (Azure OpenAI) - 128k tokens
-  - o3-mini (Azure OpenAI) - 200k tokens, reasoning_tokens especiais
-  - gemini-2.0-flash (Google) - 8k tokens
-  - gemini-2.5-pro (Google) - 1M tokens
-  - anthropic.claude-3-sonnet (Bedrock) - 200k tokens
-  - anthropic.claude-37-sonnet (Bedrock) - 200k tokens
-  - amazon.nova-lite, nova-micro, nova-pro (Bedrock)
-  - DeepSeek-R1 (Azure Foundry)
+## 2. Problem Statement
 
-### RF003 - Interface de Seleção Avançada
-- ✅ FlowModelSelector com auto-loading quando credenciais estão configuradas
-- ✅ Cache visual com indicadores de status (loading, cache, erro)
-- ✅ Posicionado acima do checkbox "Ocultar campos opcionais"
-- ✅ Mapeamento automático de modelos Anthropic incompatíveis para equivalentes Flow
-- ✅ Botão de refresh manual para forçar atualização
-- ✅ Validação de modelos selecionados com fallback inteligente
-- ✅ Flag hasAttemptedAutoLoad para evitar double mount
+### Current Issues
+1. **Security Vulnerabilities**: Credentials exposed in logs, insecure token storage
+2. **Architectural Problems**: SRP violations, monolithic components (591+ lines)
+3. **Performance Issues**: Inefficient buffer management, memory leaks
+4. **Testing Gaps**: Only 35% test coverage, missing security tests
+5. **Maintainability**: Complex components, inconsistent logging
 
-### RF004 - Sistema de Autenticação Automática
-- ✅ TokenManager com renovação automática 1 minuto antes do vencimento
-- ✅ Cache de token em memória durante validade
-- ✅ Headers específicos: FlowTenant, FlowAgent, Authorization Bearer
-- ✅ Retry automático em caso de falhas de autenticação
-- ✅ Endpoint: /auth-engine-api/v1/api-key/token
+### Impact
+- Security risks in production environment
+- High maintenance costs
+- Difficult debugging and troubleshooting
+- Poor developer experience
+- Potential compliance issues
 
-### RF005 - Sistema de Cache Inteligente
-- ✅ FlowModelCache com TTL de 60 minutos configurável
-- ✅ Invalidação automática baseada em hash de configuração
-- ✅ Suporte a localStorage e sessionStorage
-- ✅ Ferramentas de debug no console (FlowModelCacheDebug)
-- ✅ Limpeza automática de entradas expiradas
+## 3. Solution Requirements
 
-### RF006 - Tratamento de Erros Robusto
-- ✅ Fallback para modelos hardcoded em caso de falha na API
-- ✅ Try-catch silencioso com logging para debug
-- ✅ Exponential backoff com jitter para evitar thundering herd
-- ✅ Timeout configurável com Promise.race
-- ✅ Retry automático com Retry-After header para rate limiting
+### 3.1 Security Enhancements (CRITICAL)
 
-### RF007 - Streaming SSE Avançado
-- ✅ Sistema de buffer para chunks fragmentados
-- ✅ Algoritmo duplo de extração: regex + line-by-line fallback
-- ✅ Headers específicos: Cache-Control: no-cache, Connection: keep-alive
-- ✅ TextDecoder com stream: true para chunks fragmentados
-- ✅ Transformação específica por provider (OpenAI, Gemini, Bedrock)
-- ✅ Fallback para buffer final em streams
+#### 3.1.1 Secure Logging Implementation
+- Remove all sensitive data from logs (credentials, tokens)
+- Implement structured logging with correlation IDs
+- Add security event audit trail
+- Mask sensitive information in debug output
 
-### RF008 - Tratamento Especial O1/O3
-- ✅ Detecção automática de modelos O1/O3 (includes 'o1-' ou 'o3-')
-- ✅ Remoção automática de temperature (não suportado)
-- ✅ Merge de system messages para Azure OpenAI
-- ✅ Suporte a reasoning_tokens especiais (O3)
-- ✅ Logging detalhado para debugging
+#### 3.1.2 Authentication Security
+- Implement thread-safe token management
+- Add input validation for credentials
+- Secure token storage with encryption
+- Add retry logic with exponential backoff
 
-### RF009 - Backend Integration
-- ✅ Handlers testFlowConnection e fetchFlowModels
-- ✅ Import dinâmico dos módulos Flow
-- ✅ Comunicação via postMessage para evitar CSP do VSCode
-- ✅ Validação de configuração no backend
-- ✅ Tratamento de erros robusto com fallback
+#### 3.1.3 Runtime Validation
+- Implement Zod schemas for all configurations
+- Validate URLs and credentials format
+- Sanitize all user inputs
+- Add type-safe validation pipeline
 
-## Requisitos Técnicos
+### 3.2 Architectural Refactoring (HIGH)
 
-### RT001 - Estrutura de Dados Completa
-- ✅ Interfaces TypeScript para todos os providers:
-  ```typescript
-  interface FlowModel {
-    id: string;
-    name: string;
-    provider: FlowProvider;
-    capabilities: string[];
-    inputTokens?: number;
-    family?: string;
-    description?: string;
-  }
+#### 3.2.1 Single Responsibility Principle
+- Refactor flow.ts (591 lines) into specialized classes
+- Split FlowModelSelector.tsx (650 lines) into smaller components
+- Extract message processing, stream handling, and request building
 
-  interface ModelOption {
-    value: string;
-    label: string;
-    provider: string;
-  }
-  ```
+#### 3.2.2 Design Patterns Implementation
+- Implement Builder pattern for request construction
+- Add Command pattern for operations
+- Create Strategy pattern for provider handling
+- Implement Observer pattern for streaming events
 
-### RT002 - Serviços Implementados
-- ✅ TokenManager - Autenticação automática com renovação
-- ✅ FlowModelService - Busca multi-provider com cache e fallback
-- ✅ FlowModelCache - Cache inteligente com TTL e invalidação
-- ✅ PayloadGenerator - Geração específica por provider
-- ✅ RequestUtils - Utilities com retry e timeout
+#### 3.2.3 Component Decomposition
+- FlowMessageProcessor for message transformation
+- FlowStreamProcessor for streaming handling
+- FlowRequestBuilder for request construction
+- FlowLogger for structured logging
 
-### RT003 - Componentes Completos
-- ✅ Flow.tsx - Componente principal de configuração
-- ✅ FlowModelSelector.tsx - Seletor avançado com auto-load
-- ✅ useFlowModelCache.ts - Hook para gerenciamento de cache
-- ✅ Backend handlers - testFlowConnection, fetchFlowModels
+### 3.3 Performance Optimizations (MEDIUM)
 
-## Especificações de Interface
+#### 3.3.1 Stream Processing
+- Optimize buffer management with Uint8Array
+- Implement backpressure control
+- Add memory leak prevention
+- Optimize chunk extraction algorithms
 
-### Layout Implementado
-- ✅ Campo "Modelo": FlowModelSelector com dropdown inteligente
-- ✅ Posição: Acima do checkbox "Ocultar campos opcionais"
-- ✅ Formato: "Model Name (Provider)" com informações de contexto
-- ✅ Indicadores visuais: loading, cache, erro
-- ✅ Botão refresh manual para atualização forçada
+#### 3.3.2 Caching Improvements
+- Implement safe storage operations
+- Add TTL-based cache invalidation
+- Optimize model loading performance
+- Add intelligent cache warming
 
-### Comportamento Avançado
-- ✅ Auto-loading quando credenciais Flow estão configuradas
-- ✅ Cache visual com indicação de idade dos dados
-- ✅ Mapeamento automático de modelos incompatíveis
-- ✅ Validação em tempo real de modelos selecionados
-- ✅ Fallback inteligente para modelos hardcoded
-- ✅ Persistência na configuração com validação
+### 3.4 Testing Infrastructure (HIGH)
 
-## Critérios de Aceitação
+#### 3.4.1 Unit Testing
+- Achieve 90%+ test coverage for all modules
+- Add security-focused test suites
+- Implement integration tests
+- Add performance regression tests
 
-### CA001 - Sistema de Modelos Avançado
-- ✅ FlowModelService busca de todos os providers simultaneamente
-- ✅ Inclui modelos hardcoded com fallback automático
-- ✅ Deduplicação baseada no ID do modelo
-- ✅ Cache com TTL de 60 minutos e invalidação inteligente
-- ✅ Formatação para UI com informações de contexto
+#### 3.4.2 Test Utilities
+- Create mock factories for testing
+- Implement test data builders
+- Add test utilities for async operations
+- Create security test helpers
 
-### CA002 - Interface Inteligente
-- ✅ FlowModelSelector com auto-loading e cache visual
-- ✅ Posicionamento correto acima do checkbox opcional
-- ✅ Indicadores de status (loading, cache, erro)
-- ✅ Mapeamento automático de modelos incompatíveis
-- ✅ Botão refresh manual e validação em tempo real
+### 3.5 Developer Experience (MEDIUM)
 
-### CA003 - Funcionalidade Robusta
-- ✅ TokenManager com renovação automática (1min safety margin)
-- ✅ Backend integration via postMessage (evita CSP)
-- ✅ Streaming SSE com algoritmo duplo de extração
-- ✅ Tratamento especial O1/O3 (sem temperature, merge system)
-- ✅ Request utils com retry, timeout e exponential backoff
+#### 3.5.1 Code Quality
+- Implement ESLint rules for security
+- Add SonarQube integration
+- Create code review templates
+- Add automated quality gates
 
-### CA004 - Debug e Monitoramento
-- ✅ FlowModelCacheDebug tools no console
-- ✅ Logging estruturado para troubleshooting
-- ✅ Métricas de cache (age, TTL, hit/miss)
-- ✅ Scripts de teste (test-flow-api.sh, debug-models.js)
-- ✅ Tratamento de erros com fallback silencioso
+#### 3.5.2 Documentation
+- Update API documentation
+- Create security guidelines
+- Add troubleshooting guides
+- Document architectural decisions
 
-## Considerações Técnicas
+## 4. Technical Specifications
 
-### Segurança Implementada
-- ✅ Credenciais nunca expostas no frontend
-- ✅ Backend handlers para todas as requisições Flow
-- ✅ TokenManager com renovação automática segura
-- ✅ Validação de configuração no backend
-- ✅ Headers específicos para autenticação (FlowTenant, Authorization)
+### 4.1 Technology Stack
+- TypeScript with strict mode
+- Zod for runtime validation
+- Jest for testing
+- ESLint for code quality
+- SonarQube for analysis
 
-### Performance Otimizada
-- ✅ Cache inteligente com TTL de 60 minutos
-- ✅ Auto-loading com flag para evitar duplicação
-- ✅ Promise.allSettled para busca paralela de providers
-- ✅ Debounce implícito via hasAttemptedAutoLoad
-- ✅ Loading states e indicadores visuais apropriados
+### 4.2 Architecture Patterns
+- Clean Architecture principles
+- SOLID design principles
+- Dependency Injection
+- Event-driven architecture
 
-### Compatibilidade Garantida
-- ✅ Mantém compatibilidade total com configurações existentes
-- ✅ Fallback para modelos hardcoded preserva funcionalidade
-- ✅ Mapeamento automático para modelos incompatíveis
-- ✅ Suporte a múltiplas versões da API Flow
-- ✅ Integração não-invasiva com sistema existente
+### 4.3 Security Standards
+- OAuth2 best practices
+- Secure logging standards
+- Input validation requirements
+- Token management security
 
-## Arquivos Implementados
+## 5. Implementation Phases
 
-### Core Files
-- ✅ `src/api/providers/flow.ts` - FlowHandler principal
-- ✅ `src/api/providers/flow/auth.ts` - TokenManager
-- ✅ `src/api/providers/flow/config.ts` - Configurações e constantes
-- ✅ `src/api/providers/flow/model-service.ts` - FlowModelService
-- ✅ `src/api/providers/flow/model-utils.ts` - Utilitários de modelos
-- ✅ `src/api/providers/flow/payload-generator.ts` - Geração de payloads
-- ✅ `src/api/providers/flow/request-utils.ts` - Utilitários HTTP
-- ✅ `src/api/providers/flow/types.ts` - Definições TypeScript
-- ✅ `src/api/providers/flow/utils.ts` - Utilitários gerais
+### Phase 1: Security Critical (Week 1-3)
+- Secure logging implementation
+- Authentication security fixes
+- Input validation system
+- Emergency security patches
 
-### UI Components
-- ✅ `webview-ui/src/components/settings/providers/Flow.tsx`
-- ✅ `webview-ui/src/components/settings/providers/FlowModelSelector.tsx`
-- ✅ `webview-ui/src/utils/flowModelCache.ts`
-- ✅ `webview-ui/src/hooks/useFlowModelCache.ts`
+### Phase 2: Architecture Refactoring (Week 4-6)
+- flow.ts decomposition
+- FlowModelSelector splitting
+- Design patterns implementation
+- Component extraction
 
-### Backend Integration
-- ✅ `src/core/webview/webviewMessageHandler.ts` - Handlers testFlowConnection, fetchFlowModels
+### Phase 3: Performance & Testing (Week 7-9)
+- Stream processing optimization
+- Comprehensive test suite
+- Performance improvements
+- Memory leak fixes
 
-### Tests and Scripts
-- ✅ `Provider Flow/test-flow-api.http` - Exemplos de API
-- ✅ `Provider Flow/test-flow-api.sh` - Script de teste completo
-- ✅ `Provider Flow/test-flow-models-api.sh` - Teste de modelos
-- ✅ `Provider Flow/debug-models.js` - Debug específico
-- ✅ `webview-ui/src/utils/__tests__/flowModelCache.test.ts`
+### Phase 4: Quality & Documentation (Week 10)
+- Code quality improvements
+- Documentation updates
+- Final testing and validation
+- Production deployment
 
-## Referências Técnicas
-- ✅ Provider Flow/FLOW.md - Documentação completa
-- ✅ Provider Flow/Flow Provider Implementation Guide.md - Guia técnico
-- ✅ API Flow da CI&T - Endpoints e autenticação
-- ✅ Scripts de teste para validação
+## 6. Acceptance Criteria
 
-## Riscos e Mitigações
+### Security Requirements
+- [ ] Zero sensitive data in logs
+- [ ] All credentials properly validated
+- [ ] Secure token storage implemented
+- [ ] Security audit trail functional
 
-### Riscos Técnicos - RESOLVIDOS
-- ✅ **Autenticação**: TokenManager com renovação automática implementado
-- ✅ **Rate Limiting**: Exponential backoff com jitter implementado
-- ✅ **Compatibilidade**: PayloadGenerator específico por provider implementado
-- ✅ **Streaming**: Algoritmo duplo de extração SSE implementado
-- ✅ **Cache**: Sistema inteligente com invalidação automática implementado
+### Architecture Requirements
+- [ ] All files under 500 lines
+- [ ] SRP compliance verified
+- [ ] Design patterns implemented
+- [ ] Component responsibilities clear
 
-### Riscos de Integração - RESOLVIDOS
-- ✅ **Breaking Changes**: Integração não-invasiva mantém compatibilidade
-- ✅ **Performance**: Cache e otimizações implementadas
-- ✅ **Manutenibilidade**: Código modularizado e bem documentado
-- ✅ **CSP Restrictions**: Backend integration via postMessage implementada
-- ✅ **Double Mount**: Flag hasAttemptedAutoLoad resolve problema
+### Performance Requirements
+- [ ] Stream processing optimized
+- [ ] Memory leaks eliminated
+- [ ] Buffer management efficient
+- [ ] Cache operations secure
 
-## Status de Implementação
+### Testing Requirements
+- [ ] 90%+ test coverage achieved
+- [ ] Security tests passing
+- [ ] Integration tests functional
+- [ ] Performance tests passing
 
-### ✅ FASE 1: Core Implementation - COMPLETA
-- ✅ FlowHandler com streaming SSE avançado
-- ✅ TokenManager com renovação automática
-- ✅ Sistema de configuração robusto
-- ✅ Tipos TypeScript completos
+## 7. Risk Assessment
 
-### ✅ FASE 2: Provider Support - COMPLETA
-- ✅ Suporte a todos os providers (Azure OpenAI, Gemini, Bedrock, Foundry)
-- ✅ PayloadGenerator específico com tratamento O1/O3
-- ✅ Transformadores de resposta por provider
-- ✅ Sistema de embeddings integrado
+### High Risk
+- Security vulnerabilities in production
+- Breaking changes during refactoring
+- Performance degradation during migration
 
-### ✅ FASE 3: Interface & Integration - COMPLETA
-- ✅ FlowModelSelector com auto-loading
-- ✅ Sistema de cache visual
-- ✅ Backend integration completa
-- ✅ Testes e scripts de validação
-- ✅ Debug utilities implementadas
+### Mitigation Strategies
+- Incremental deployment approach
+- Comprehensive testing at each phase
+- Rollback procedures documented
+- Security review at each milestone
 
-## Dependências
+## 8. Success Metrics
 
-### Internas - ATENDIDAS
-- ✅ Sistema de providers existente - Integração completa
-- ✅ Tipos TypeScript do projeto - Tipos específicos implementados
-- ✅ Interface de configuração - FlowModelSelector integrado
-- ✅ Sistema de streaming - SSE avançado implementado
-- ✅ Backend webview handlers - testFlowConnection, fetchFlowModels
+### Quantitative Metrics
+- Security vulnerabilities: 0 (from 12)
+- Test coverage: 90%+ (from 35%)
+- File size compliance: 100% (from 86%)
+- Complexity score: <8 (from 10-20)
 
-### Externas - CONFIGURADAS
-- ✅ API Flow da CI&T - Endpoints mapeados e funcionais
-- ✅ Credenciais de acesso - Sistema de autenticação implementado
-- ✅ Conectividade de rede - Request utils com retry implementados
+### Qualitative Metrics
+- Developer satisfaction improvement
+- Reduced debugging time
+- Improved code maintainability
+- Enhanced security posture
 
-## Métricas de Sucesso - ALCANÇADAS
+## 9. Timeline and Resources
 
-1. ✅ **Funcionalidade**: 100% dos endpoints implementados e funcionais
-   - Todos os providers suportados (Azure OpenAI, Gemini, Bedrock, Foundry)
-   - Sistema de embeddings integrado
-   - Streaming SSE com algoritmo duplo
+### Duration: 10 weeks
+### Estimated Effort: 160 person-hours
+### Budget: $25,000 - $35,000
 
-2. ✅ **Compatibilidade**: 0 breaking changes na arquitetura existente
-   - Integração não-invasiva mantém funcionalidades existentes
-   - Mapeamento automático de modelos incompatíveis
-   - Fallback para modelos hardcoded
-
-3. ✅ **Performance**: Otimizações implementadas
-   - Cache inteligente com TTL de 60 minutos
-   - Auto-loading com prevenção de duplicação
-   - Request paralelo com Promise.allSettled
-
-4. ✅ **Usabilidade**: Interface intuitiva implementada
-   - Auto-loading quando credenciais configuradas
-   - Indicadores visuais de status
-   - Botão refresh manual e validação em tempo real
-
-5. ✅ **Confiabilidade**: Sistema robusto implementado
-   - TokenManager com renovação automática
-   - Exponential backoff com jitter
-   - Fallback silencioso para modelos hardcoded
-   - Debug utilities para troubleshooting
-
-## Conclusão
-
-O Flow Provider está **100% IMPLEMENTADO** com todas as funcionalidades avançadas:
-- Sistema completo de autenticação e cache
-- Interface inteligente com auto-loading
-- Suporte robusto a streaming e múltiplos providers
-- Tratamento especial para modelos O1/O3
-- Debug utilities e monitoramento completo
-- Integração não-invasiva com sistema existente
-
-**Status: PRONTO PARA PRODUÇÃO** ✅
+### Key Milestones
+- Week 3: Security vulnerabilities resolved
+- Week 6: Architecture refactoring complete
+- Week 9: Performance optimization done
+- Week 10: Production ready deployment

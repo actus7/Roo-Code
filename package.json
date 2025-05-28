@@ -20,11 +20,15 @@
 		"clean": "turbo clean --log-order grouped --output-logs new-only && rimraf dist out bin .vite-port .turbo",
 		"changeset:version": "cp CHANGELOG.md src/CHANGELOG.md && changeset version && cp -vf src/CHANGELOG.md .",
 		"knip": "knip --include files",
-		"update-contributors": "node scripts/update-contributors.js"
+		"update-contributors": "node scripts/update-contributors.js",
+		"sonar": "sonar-scanner",
+		"sonar:local": "sonar-scanner -Dsonar.host.url=http://localhost:9000"
 	},
 	"devDependencies": {
 		"@changesets/cli": "^2.27.10",
 		"@dotenvx/dotenvx": "^1.34.0",
+		"@typescript-eslint/eslint-plugin": "^8.33.0",
+		"@typescript-eslint/parser": "^8.33.0",
 		"@vscode/vsce": "3.3.2",
 		"esbuild": "^0.25.0",
 		"eslint": "^9.27.0",
@@ -36,6 +40,7 @@
 		"ovsx": "0.10.2",
 		"prettier": "^3.4.2",
 		"rimraf": "^6.0.1",
+		"sonarqube-scanner": "^4.3.0",
 		"turbo": "^2.5.3",
 		"typescript": "^5.4.5"
 	},

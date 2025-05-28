@@ -11,6 +11,13 @@
                 "OPENAI_API_KEY": "your-openai-api-key-here",
                 "GOOGLE_API_KEY": "your-google-api-key-here"
             }
+        },
+        "github.com/modelcontextprotocol/servers/tree/main/src/sequentialthinking": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@modelcontextprotocol/server-sequential-thinking"
+            ]
         }
     }
 }

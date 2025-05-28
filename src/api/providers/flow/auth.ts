@@ -1,5 +1,9 @@
 import type { FlowConfig, AuthResponse } from "./types"
 import { FLOW_ENDPOINTS, FLOW_HEADERS } from "./config"
+import { secureLogger } from "./secure-logger"
+import { securityAuditTrail } from "./audit-trail"
+import { validateFlowCredentials } from "./credential-validator"
+import { retryAuthentication } from "./enhanced-retry"
 
 /**
  * Authenticate with Flow API using OAuth2 client credentials
@@ -7,69 +11,127 @@ import { FLOW_ENDPOINTS, FLOW_HEADERS } from "./config"
  * @returns Promise resolving to authentication response
  */
 export async function authenticate(config: FlowConfig): Promise<AuthResponse> {
-	const url = `${config.flowAuthBaseUrl}${FLOW_ENDPOINTS.auth}`
+	// Validate credentials before proceeding
+	const validatedConfig = validateFlowCredentials(config)
+
+	const correlationId = secureLogger.generateCorrelationId()
+	const url = `${validatedConfig.flowAuthBaseUrl}${FLOW_ENDPOINTS.auth}`
 
 	const payload = {
-		clientId: config.flowClientId,
-		clientSecret: config.flowClientSecret,
-		appToAccess: config.flowAppToAccess,
+		clientId: validatedConfig.flowClientId,
+		clientSecret: validatedConfig.flowClientSecret,
+		appToAccess: validatedConfig.flowAppToAccess,
 	}
 
-	console.log("🔐 [authenticate] Iniciando autenticação", {
+	secureLogger.logAuth("Iniciando autenticação", {
+		correlationId,
 		url,
-		tenant: config.flowTenant,
-		clientId: config.flowClientId,
-		appToAccess: config.flowAppToAccess,
-		hasClientSecret: !!config.flowClientSecret,
+		tenant: validatedConfig.flowTenant,
+		appToAccess: validatedConfig.flowAppToAccess,
+		hasClientSecret: !!validatedConfig.flowClientSecret,
 	})
+
+	// Log authentication attempt to audit trail
+	await securityAuditTrail.logAuthenticationEvent(
+		'auth_attempt',
+		correlationId,
+		'pending',
+		{
+			clientId: validatedConfig.flowClientId
+		}
+	)
 
 	try {
 		const response = await fetch(url, {
 			method: "POST",
 			headers: {
 				...FLOW_HEADERS,
-				FlowTenant: config.flowTenant,
+				FlowTenant: validatedConfig.flowTenant,
 			},
 			body: JSON.stringify(payload),
 		})
 
-		console.log("📡 [authenticate] Resposta recebida", {
-			status: response.status,
-			statusText: response.statusText,
+		secureLogger.logResponse(response.status, {
+			correlationId,
+			operation: "authenticate",
 			ok: response.ok,
 		})
 
 		if (!response.ok) {
 			const errorText = await response.text()
-			console.error("❌ [authenticate] Falha na autenticação", {
-				status: response.status,
-				statusText: response.statusText,
-				errorText,
+			secureLogger.logSecurityEvent({
+				eventType: 'auth_failure',
+				timestamp: Date.now(),
+				correlationId,
+				result: 'failure',
+				errorCode: response.status.toString(),
+				metadata: {
+					statusText: response.statusText,
+					hasErrorText: !!errorText
+				}
 			})
+
+			// Log authentication failure to audit trail
+			await securityAuditTrail.logAuthenticationEvent(
+				'auth_failure',
+				correlationId,
+				'failure',
+				{
+					clientId: validatedConfig.flowClientId,
+					errorCode: response.status.toString()
+				}
+			)
+
 			throw new Error(`Authentication failed: ${response.status} ${response.statusText} - ${errorText}`)
 		}
 
 		const data = await response.json()
 
-		console.log("📋 [authenticate] Dados de resposta", {
+		secureLogger.logDebug("Dados de resposta recebidos", {
+			correlationId,
 			hasAccessToken: !!data.access_token,
 			expiresIn: data.expires_in,
 			tokenType: data.token_type,
 		})
 
 		if (!data.access_token) {
+			secureLogger.logSecurityEvent({
+				eventType: 'auth_failure',
+				timestamp: Date.now(),
+				correlationId,
+				result: 'failure',
+				errorCode: 'MISSING_TOKEN',
+				metadata: { reason: 'access_token missing in response' }
+			})
 			throw new Error("Authentication response missing access_token")
 		}
 
-		console.log("✅ [authenticate] Autenticação bem-sucedida")
+		secureLogger.logSecurityEvent({
+			eventType: 'auth_success',
+			timestamp: Date.now(),
+			correlationId,
+			result: 'success'
+		})
+
+		// Log authentication success to audit trail
+		await securityAuditTrail.logAuthenticationEvent(
+			'auth_success',
+			correlationId,
+			'success',
+			{
+				clientId: validatedConfig.flowClientId
+			}
+		)
+
 		return {
 			access_token: data.access_token,
-			expires_in: data.expires_in || 3600, // Default to 1 hour if not provided
-			token_type: data.token_type || "Bearer",
+			expires_in: data.expires_in ?? 3600, // Default to 1 hour if not provided
+			token_type: data.token_type ?? "Bearer",
 		}
 	} catch (error) {
-		console.error("❌ [authenticate] Erro na autenticação:", {
-			error: error instanceof Error ? error.message : String(error),
+		secureLogger.logError("Erro na autenticação", error instanceof Error ? error : new Error(String(error)), {
+			correlationId,
+			operation: "authenticate"
 		})
 
 		if (error instanceof Error) {
@@ -85,10 +147,13 @@ export async function authenticate(config: FlowConfig): Promise<AuthResponse> {
 export class TokenManager {
 	private token: string | null = null
 	private tokenExpiry: number = 0
-	private config: FlowConfig
+	private readonly config: FlowConfig
+	private readonly correlationId: string
 
 	constructor(config: FlowConfig) {
-		this.config = config
+		// Validate credentials during construction
+		this.config = validateFlowCredentials(config)
+		this.correlationId = secureLogger.generateCorrelationId()
 	}
 
 	/**
@@ -97,21 +162,28 @@ export class TokenManager {
 	 */
 	async getValidToken(): Promise<string> {
 		const now = Date.now()
+		const needsRefresh = !this.token || now >= this.tokenExpiry - 60000
 
-		console.log("🔑 [TokenManager] getValidToken chamado", {
+		secureLogger.logDebug("getValidToken chamado", {
+			correlationId: this.correlationId,
 			hasToken: !!this.token,
-			tokenExpiry: this.tokenExpiry,
-			now,
-			needsRefresh: !this.token || now >= this.tokenExpiry - 60000,
+			needsRefresh,
+			operation: "getValidToken"
 		})
 
 		// Refresh token if it doesn't exist or expires within 1 minute
-		if (!this.token || now >= this.tokenExpiry - 60000) {
-			console.log("🔄 [TokenManager] Token precisa ser renovado")
+		if (needsRefresh) {
+			secureLogger.logDebug("Token precisa ser renovado", {
+				correlationId: this.correlationId,
+				operation: "token_refresh_needed"
+			})
 			await this.refreshToken()
 		}
 
-		console.log("✅ [TokenManager] Token válido retornado")
+		secureLogger.logDebug("Token válido retornado", {
+			correlationId: this.correlationId,
+			operation: "getValidToken_success"
+		})
 		return this.token!
 	}
 
@@ -119,11 +191,12 @@ export class TokenManager {
 	 * Force refresh the access token
 	 */
 	async refreshToken(): Promise<void> {
-		console.log("🔄 [TokenManager] refreshToken iniciado", {
+		secureLogger.logDebug("refreshToken iniciado", {
+			correlationId: this.correlationId,
+			operation: "refreshToken",
 			config: {
 				baseUrl: this.config.flowAuthBaseUrl,
 				tenant: this.config.flowTenant,
-				clientId: this.config.flowClientId,
 				hasClientSecret: !!this.config.flowClientSecret,
 				appToAccess: this.config.flowAppToAccess,
 			},
@@ -134,14 +207,30 @@ export class TokenManager {
 			this.token = authResponse.access_token
 			this.tokenExpiry = Date.now() + authResponse.expires_in * 1000
 
-			console.log("✅ [TokenManager] Token renovado com sucesso", {
-				tokenLength: this.token.length,
-				expiresIn: authResponse.expires_in,
-				tokenExpiry: this.tokenExpiry,
+			secureLogger.logSecurityEvent({
+				eventType: 'token_refresh',
+				timestamp: Date.now(),
+				correlationId: this.correlationId,
+				result: 'success',
+				metadata: {
+					expiresIn: authResponse.expires_in,
+					hasToken: !!this.token
+				}
 			})
+
+			// Log token refresh to audit trail
+			await securityAuditTrail.logAuthenticationEvent(
+				'token_refresh',
+				this.correlationId,
+				'success',
+				{
+					clientId: this.config.flowClientId
+				}
+			)
 		} catch (error) {
-			console.error("❌ [TokenManager] Erro ao renovar token:", {
-				error: error instanceof Error ? error.message : String(error),
+			secureLogger.logError("Erro ao renovar token", error instanceof Error ? error : new Error(String(error)), {
+				correlationId: this.correlationId,
+				operation: "refreshToken"
 			})
 
 			this.token = null

@@ -1,6 +1,8 @@
 import { PaperPlaneIcon, StopIcon } from "@radix-ui/react-icons"
+import { useState } from "react"
 
 import { Button, AutosizeTextarea } from "@/components/ui"
+import { InputValidator } from "@/utils/input-validation"
 
 import { ChatInputProvider } from "./ChatInputProvider"
 import { useChatUI } from "./useChatUI"
@@ -8,12 +10,23 @@ import { useChatInput } from "./useChatInput"
 
 export function ChatInput() {
 	const { input, setInput, append, isLoading } = useChatUI()
+	const [validationError, setValidationError] = useState<string | null>(null)
 	const isDisabled = isLoading || !input.trim()
 
 	const submit = async () => {
 		if (input.trim() === "") {
 			return
 		}
+
+		// Validar input antes de enviar
+		const validation = InputValidator.validateChatInput(input)
+		if (!validation.isValid) {
+			setValidationError(validation.error || "Input inválido")
+			return
+		}
+
+		// Limpar erro de validação se existir
+		setValidationError(null)
 
 		setInput("")
 		await append({ role: "user", content: input })
@@ -38,6 +51,11 @@ export function ChatInput() {
 	return (
 		<ChatInputProvider value={{ isDisabled, handleKeyDown, handleSubmit }}>
 			<div className="border-t border-vscode-editor-background p-3">
+				{validationError && (
+					<div className="mb-2 p-2 bg-red-100 border border-red-400 text-red-700 rounded text-sm">
+						{validationError}
+					</div>
+				)}
 				<ChatInputForm />
 			</div>
 		</ChatInputProvider>

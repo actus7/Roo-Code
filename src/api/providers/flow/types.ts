@@ -1,4 +1,28 @@
 import type { Anthropic } from "@anthropic-ai/sdk"
+import { z } from "zod"
+
+// Flow Configuration Validation Schema
+export const FlowConfigSchema = z.object({
+	// Required parameters with validation
+	flowBaseUrl: z.string().url("Base URL deve ser uma URL válida"),
+	flowTenant: z.string().min(1, "Tenant é obrigatório").max(100, "Tenant muito longo"),
+	flowClientId: z.string()
+		.min(1, "Client ID é obrigatório")
+		.regex(/^[a-zA-Z0-9\-_]+$/, "Client ID deve conter apenas letras, números, hífens e underscores")
+		.max(255, "Client ID muito longo"),
+	flowClientSecret: z.string()
+		.min(32, "Client Secret deve ter pelo menos 32 caracteres")
+		.max(512, "Client Secret muito longo"),
+
+	// Optional parameters with defaults and validation
+	flowAuthBaseUrl: z.string().url("Auth Base URL deve ser uma URL válida").optional(),
+	flowAppToAccess: z.string().min(1).max(100).optional(),
+	flowAgent: z.string().min(1).max(50).optional(),
+	apiModelId: z.string().min(1).max(100).optional(),
+	modelTemperature: z.number().min(0).max(1).optional(),
+	modelMaxTokens: z.number().min(1).max(1000000).optional(),
+	flowRequestTimeout: z.number().min(1000).max(300000).optional()
+})
 
 // Flow Configuration Types
 export interface FlowConfig {
@@ -17,6 +41,9 @@ export interface FlowConfig {
 	modelMaxTokens?: number
 	flowRequestTimeout?: number
 }
+
+// Type inference from schema
+export type ValidatedFlowConfig = z.infer<typeof FlowConfigSchema>
 
 // Authentication Types
 export interface AuthResponse {

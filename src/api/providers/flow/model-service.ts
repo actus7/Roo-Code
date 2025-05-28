@@ -1,6 +1,6 @@
 import type { FlowConfig, FlowProvider, Model } from "./types"
 import { FLOW_ENDPOINTS, PROVIDER_CAPABILITIES } from "./config"
-import { TokenManager } from "./auth"
+import { SecureTokenManager as TokenManager } from "./secure-token-manager"
 import { makeJsonRequest, createFlowHeaders, handleHttpError } from "./request-utils"
 import { debug } from "./utils"
 
@@ -193,7 +193,7 @@ export class FlowModelService {
 			const url = `${this.config.flowBaseUrl}${FLOW_ENDPOINTS.models}/${provider}?capabilities=${capabilities}`
 
 			const token = await this.tokenManager.getValidToken()
-			const headers = createFlowHeaders(token, this.config.flowTenant)
+			const headers = createFlowHeaders(token, this.config.flowTenant, this.config.flowAgent ?? "chat")
 
 			console.log(`[FlowModelService] Fetching models from ${provider}`, {
 				url,

@@ -42,6 +42,12 @@ Accept: application/json
 FlowTenant: {{flowTenant}}
 Authorization: Bearer {{token}}
 
+### 5. Listar Modelos - Azure Foundry
+GET {{baseUrl}}/ai-orchestration-api/v1/models/azure-foundry?capabilities=system-instruction,chat-conversation
+Accept: application/json
+FlowTenant: {{flowTenant}}
+Authorization: Bearer {{token}}
+
 ### Azure OpenAI - Chat GPT-4O
 POST {{baseUrl}}/ai-orchestration-api/v1/openai/chat/completions
 Content-Type: application/json
@@ -87,9 +93,8 @@ FlowTenant: {{flowTenant}}
 }
 
 ### Azure OpenAI - Chat O3-Mini
-# ⚠️ PROBLEMA CONHECIDO: Este modelo retorna HTTP 503 Service Unavailable
-# Status: Requer tratamento especial ou tem requisitos diferentes da API
-# Removido da lista de modelos até correção
+# ✅ MODELO ATUALIZADO: Problemas de disponibilidade foram resolvidos
+# Status: Agora funciona corretamente com reasoning_effort
 POST {{baseUrl}}/ai-orchestration-api/v1/openai/chat/completions
 Content-Type: application/json
 Accept: application/json
@@ -102,19 +107,19 @@ FlowTenant: {{flowTenant}}
     "messages": [
         {
             "content": "You are a helpful assistant.",
-            "role": "assistant"
+            "role": "user"
         },
         {
             "content": "Generate 3 random colors in RGB format",
             "role": "user"
         }
-    ]
+    ],
+    "reasoning_effort": "medium"
 }
 
 ### Azure OpenAI - O1 mini
-# ⚠️ PROBLEMA CONHECIDO: Este modelo retorna HTTP 503 Service Unavailable
-# Status: Requer tratamento especial ou tem requisitos diferentes da API
-# Removido da lista de modelos até correção
+# ✅ MODELO ATUALIZADO: Problemas de disponibilidade foram resolvidos
+# Status: Agora funciona corretamente
 POST {{baseUrl}}/ai-orchestration-api/v1/openai/chat/completions
 Content-Type: application/json
 Accept: application/json
@@ -127,7 +132,30 @@ FlowTenant: {{flowTenant}}
     "messages": [
         {
             "content": "You are a helpful assistant.",
-            "role": "assistant"
+            "role": "user"
+        },
+        {
+            "content": "Generate 3 random colors in RGB format",
+            "role": "user"
+        }
+    ]
+}
+
+### Azure OpenAI - O1 Preview
+# ✅ MODELO ADICIONAL: Modelo O1 Preview para tarefas complexas
+POST {{baseUrl}}/ai-orchestration-api/v1/openai/chat/completions
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{token}}
+FlowAgent: {{agent}}
+FlowTenant: {{flowTenant}}
+
+{
+    "model": "o1-preview",
+    "messages": [
+        {
+            "content": "You are a helpful assistant.",
+            "role": "user"
         },
         {
             "content": "Generate 3 random colors in RGB format",
@@ -246,6 +274,32 @@ FlowTenant: {{flowTenant}}
     "system": "You are a helpful assistant."
 }
 
+### Amazon Bedrock - Claude 3.5 Sonnet
+POST {{baseUrl}}/ai-orchestration-api/v1/bedrock/invoke
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{token}}
+FlowAgent: {{agent}}
+FlowTenant: {{flowTenant}}
+
+{
+    "allowedModels": ["anthropic.claude-35-sonnet"],
+    "anthropic_version": "bedrock-2023-05-31",
+    "max_tokens": 8192,
+    "messages": [
+        {
+            "content": [
+                {
+                    "text": "Generate 3 random colors in RGB format",
+                    "type": "text"
+                }
+            ],
+            "role": "user"
+        }
+    ],
+    "system": "You are a helpful assistant."
+}
+
 ### Amazon Bedrock - Claude 3.7 Sonnet
 POST {{baseUrl}}/ai-orchestration-api/v1/bedrock/invoke
 Content-Type: application/json
@@ -272,6 +326,98 @@ FlowTenant: {{flowTenant}}
     "system": "You are a helpful assistant."
 }
 
+### Amazon Bedrock - Nova Lite
+POST {{baseUrl}}/ai-orchestration-api/v1/bedrock/invoke
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{token}}
+FlowAgent: {{agent}}
+FlowTenant: {{flowTenant}}
+
+{
+    "allowedModels": ["amazon.nova-lite"],
+    "messages": [
+        {
+            "content": [
+                { "text": "Generate 3 random colors in RGB format" }
+            ],
+            "role": "user"
+        }
+    ],
+    "system": [
+        { "text": "You are a helpful assistant." }
+    ]
+}
+
+### Amazon Bedrock - Nova Micro
+POST {{baseUrl}}/ai-orchestration-api/v1/bedrock/invoke
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{token}}
+FlowAgent: {{agent}}
+FlowTenant: {{flowTenant}}
+
+{
+    "allowedModels": ["amazon.nova-micro"],
+    "messages": [
+        {
+            "content": [
+                { "text": "Generate 3 random colors in RGB format" }
+            ],
+            "role": "user"
+        }
+    ],
+    "system": [
+        { "text": "You are a helpful assistant." }
+    ]
+}
+
+### Amazon Bedrock - Nova Pro
+POST {{baseUrl}}/ai-orchestration-api/v1/bedrock/invoke
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{token}}
+FlowAgent: {{agent}}
+FlowTenant: {{flowTenant}}
+
+{
+    "allowedModels": ["amazon.nova-pro"],
+    "messages": [
+        {
+            "content": [
+                { "text": "Generate 3 random colors in RGB format" }
+            ],
+            "role": "user"
+        }
+    ],
+    "system": [
+        { "text": "You are a helpful assistant." }
+    ]
+}
+
+### Amazon Bedrock - Llama 3 70B Instruct
+POST {{baseUrl}}/ai-orchestration-api/v1/bedrock/invoke
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{token}}
+FlowAgent: {{agent}}
+FlowTenant: {{flowTenant}}
+
+{
+    "allowedModels": ["meta.llama3-70b-instruct"],
+    "messages": [
+        {
+            "content": [
+                { "text": "Generate 3 random colors in RGB format" }
+            ],
+            "role": "user"
+        }
+    ],
+    "system": [
+        { "text": "You are a helpful assistant." }
+    ]
+}
+
 ### Azure OpenAI - Embeddings (text-embedding-ada-002)
 # ✅ MODELO HARDCODED: Funciona mas pode não aparecer na API de listagem
 # Status: Incluído na lista de modelos hardcoded como fallback
@@ -281,6 +427,7 @@ Accept: application/json
 Authorization: Bearer {{token}}
 FlowAgent: {{agent}}
 FlowTenant: {{flowTenant}}
+x-ms-model-mesh-model-name: text-embedding-ada-002
 
 {
     "input": "Convert this text to a vector",
@@ -297,9 +444,105 @@ Accept: application/json
 Authorization: Bearer {{token}}
 FlowAgent: {{agent}}
 FlowTenant: {{flowTenant}}
+x-ms-model-mesh-model-name: text-embedding-3-small
 
 {
     "input": "Convert this text to a vector",
     "user": "flow",
     "allowedModels": ["text-embedding-3-small"]
+}
+
+### Azure Foundry - DeepSeek-R1
+# ✅ MODELO FOUNDRY: DeepSeek-R1 com formatação específica
+POST {{baseUrl}}/ai-orchestration-api/v1/foundry/chat/completions
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{token}}
+FlowAgent: {{agent}}
+FlowTenant: {{flowTenant}}
+
+{
+    "model": "DeepSeek-R1",
+    "messages": [
+        {
+            "content": "You are an AI programming assistant, utilizing the DeepSeek Coder model, developed by DeepSeek Company, and your role is to assist with questions related to computer science. For politically sensitive questions, security and privacy issues, and other non-computer science questions, you will not answer.\n### Instruction:\nYou are a helpful assistant.\nGenerate 3 random colors in RGB format\n### Response:\n",
+            "role": "user"
+        }
+    ]
+}
+
+### Google Gemini - 2.5 Pro com Geração de Imagem
+# ✅ MODELO MULTIMODAL: Gemini 2.5 Pro com capacidade de geração de imagem
+POST {{baseUrl}}/ai-orchestration-api/v1/google/generateContent
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{token}}
+FlowAgent: {{agent}}
+FlowTenant: {{flowTenant}}
+
+{
+    "model": "gemini-2.5-pro",
+    "contents": [
+        {
+            "role": "user",
+            "parts": [
+                { "text": "Hi, can you create a 3d rendered image of a pig with wings and a top hat flying over a happy futuristic scifi city with lots of greenery?" }
+            ]
+        }
+    ],
+    "generationConfig": {
+        "responseModalities": ["Text", "Image"]
+    }
+}
+
+### Google Gemini - 2.5 Pro com Pergunta sobre Data de Corte
+# ✅ TESTE ESPECÍFICO: Verificar data de conhecimento do modelo
+POST {{baseUrl}}/ai-orchestration-api/v1/google/generateContent
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{token}}
+FlowAgent: {{agent}}
+FlowTenant: {{flowTenant}}
+
+{
+    "model": "gemini-2.5-pro",
+    "contents": [
+        {
+            "parts": [
+                {
+                    "text": "You are a helpful assistant."
+                }
+            ],
+            "role": "user"
+        },
+        {
+            "parts": [
+                {
+                    "text": "Generate 3 random colors in RGB format, and what is your cut date?"
+                }
+            ],
+            "role": "user"
+        }
+    ]
+}
+
+### Google Gemini - 2.5 Pro em Português
+# ✅ TESTE IDIOMA: Verificar suporte ao português brasileiro
+POST {{baseUrl}}/ai-orchestration-api/v1/google/generateContent
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{token}}
+FlowAgent: {{agent}}
+FlowTenant: {{flowTenant}}
+
+{
+    "model": "gemini-2.5-pro",
+    "contents": [
+        {
+            "role": "user",
+            "parts": [
+                { "text": "Qual a capital do Brasil?" }
+            ]
+        }
+    ]
 }
