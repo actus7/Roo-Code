@@ -3,7 +3,7 @@
 	"displayName": "%extension.displayName%",
 	"description": "%extension.description%",
 	"publisher": "RooVeterinaryInc",
-	"version": "3.18.4",
+	"version": "3.18.5",
 	"icon": "assets/icons/icon.png",
 	"galleryBanner": {
 		"color": "#617A91",
@@ -327,7 +327,7 @@
 		"vscode:prepublish": "pnpm bundle --production",
 		"vsix": "mkdirp ../bin && npx vsce package --no-dependencies --out ../bin",
 		"publish:marketplace": "vsce publish --no-dependencies && ovsx publish --no-dependencies",
-		"watch:esbuild": "pnpm bundle --watch",
+		"watch:bundle": "pnpm bundle --watch",
 		"watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
 		"clean": "rimraf README.md CHANGELOG.md LICENSE dist webview-ui out mock .turbo"
 	},
