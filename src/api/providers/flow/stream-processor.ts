@@ -350,7 +350,8 @@ export class FlowStreamProcessor implements IFlowStreamProcessor {
 	 * Log extraction results for debugging
 	 */
 	private logExtractionResults(buffer: string, chunks: string[], remaining: string): void {
-		console.log("🔧 [extractCompleteChunks] Extração completa:", {
+		// Only log in debug mode using the conditional logger
+		this.logger.debug("Extração completa", {
 			inputLength: buffer.length,
 			chunksFound: chunks.length,
 			remainingLength: remaining.length,

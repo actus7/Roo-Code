@@ -195,65 +195,34 @@ export class FlowModelService {
 			const token = await this.tokenManager.getValidToken()
 			const headers = createFlowHeaders(token, this.config.flowTenant, this.config.flowAgent ?? "chat")
 
-			console.log(`[FlowModelService] Fetching models from ${provider}`, {
-				url,
-				capabilities,
-				cacheKey
-			})
-
 			const response = await makeJsonRequest<Model[]>(url, {
 				method: "GET",
 				headers,
 				timeout: this.config.flowRequestTimeout
 			})
 
-			console.log(`[FlowModelService] Raw API response for ${provider}:`, {
-				responseType: typeof response,
-				isArray: Array.isArray(response),
-				length: Array.isArray(response) ? response.length : 'N/A',
-				firstItem: Array.isArray(response) && response.length > 0 ? response[0] : null
-			})
-
 			// Transform and validate response
 			const models = this.transformApiModels(response, provider)
-			console.log(`[FlowModelService] Transformed ${models.length} API models for ${provider}:`,
-				models.map(m => ({ id: m.id, name: m.name, capabilities: m.capabilities }))
-			)
 
 			// Add hardcoded models
 			const hardcodedModels = HARDCODED_MODELS[provider] || []
-			console.log(`[FlowModelService] Adding ${hardcodedModels.length} hardcoded models for ${provider}:`,
-				hardcodedModels.map(m => ({ id: m.id, name: m.name }))
-			)
 
 			const allModels = [...models, ...hardcodedModels]
-			console.log(`[FlowModelService] Combined models for ${provider}: ${allModels.length} total`)
 
 			// Remove duplicates based on model ID
 			const uniqueModels = this.removeDuplicateModels(allModels)
-			console.log(`[FlowModelService] After deduplication for ${provider}: ${uniqueModels.length} unique models:`,
-				uniqueModels.map(m => ({ id: m.id, name: m.name, source: m.description?.includes('hardcoded') ? 'hardcoded' : 'api' }))
-			)
 
 			// Cache the results
 			this.cacheModels(cacheKey, uniqueModels)
 
-			console.log(`[FlowModelService] Successfully cached ${uniqueModels.length} models for ${provider}`)
 			return uniqueModels
 
 		} catch (error) {
 			const enhancedError = handleHttpError(error, `Fetching models from ${provider}`)
-			console.error(`[FlowModelService] Error fetching models from ${provider}:`, {
-				error: enhancedError.message,
-				stack: enhancedError.stack,
-				originalError: error
-			})
+			debug(`Error fetching models from ${provider}`, { error: enhancedError.message })
 
 			// Return hardcoded models as fallback
 			const fallbackModels = HARDCODED_MODELS[provider] || []
-			console.log(`[FlowModelService] Using ${fallbackModels.length} hardcoded models as fallback for ${provider}:`,
-				fallbackModels.map(m => ({ id: m.id, name: m.name }))
-			)
 			return fallbackModels
 		}
 	}
@@ -267,34 +236,18 @@ export class FlowModelService {
 		const providers: FlowProvider[] = ["azure-openai", "google-gemini", "amazon-bedrock", "azure-foundry"]
 		const results: Record<FlowProvider, Model[]> = {} as Record<FlowProvider, Model[]>
 
-		console.log("[FlowModelService] Starting fetchAllModels for providers:", providers)
-		const startTime = Date.now()
-
 		// Fetch models from all providers in parallel
 		const promises = providers.map(async (provider) => {
-			const providerStartTime = Date.now()
 			try {
-				console.log(`[FlowModelService] Starting fetch for provider: ${provider}`)
 				const models = await this.fetchModelsFromProvider(provider, useCache)
-				console.log(`[FlowModelService] Completed fetch for provider: ${provider}`, {
-					duration: Date.now() - providerStartTime,
-					modelCount: models.length
-				})
 				return { provider, models }
 			} catch (error) {
-				console.error(`[FlowModelService] Failed to fetch models from ${provider}`, {
-					error,
-					duration: Date.now() - providerStartTime
-				})
 				debug(`Failed to fetch models from ${provider}`, { error })
 				return { provider, models: HARDCODED_MODELS[provider] || [] }
 			}
 		})
 
 		const responses = await Promise.allSettled(promises)
-		console.log("[FlowModelService] All provider fetches completed", {
-			totalDuration: Date.now() - startTime
-		})
 
 		responses.forEach((response, index) => {
 			const provider = providers[index]
@@ -315,22 +268,11 @@ export class FlowModelService {
 	 * @returns Promise resolving to formatted model options
 	 */
 	async getModelOptions(useCache = true): Promise<Array<{ value: string; label: string; provider: string }>> {
-		console.log("[FlowModelService] Starting getModelOptions", { useCache })
-		const startTime = Date.now()
-
 		const allModels = await this.fetchAllModels(useCache)
-		console.log("[FlowModelService] fetchAllModels completed", {
-			duration: Date.now() - startTime,
-			providerCounts: Object.entries(allModels).map(([provider, models]) => ({ provider, count: models.length }))
-		})
 
 		const options: Array<{ value: string; label: string; provider: string }> = []
 
 		Object.entries(allModels).forEach(([provider, models]) => {
-			console.log(`[FlowModelService] Processing ${models.length} models for provider ${provider}:`,
-				models.map(m => ({ id: m.id, name: m.name, inputTokens: m.inputTokens }))
-			)
-
 			models.forEach((model) => {
 				const contextInfo = model.inputTokens ? ` (Context: ${model.inputTokens.toLocaleString()} tokens)` : ""
 				const label = `${provider} - ${model.name}${contextInfo}`
@@ -342,7 +284,6 @@ export class FlowModelService {
 				}
 
 				options.push(option)
-				console.log(`[FlowModelService] Added option:`, option)
 			})
 		})
 
@@ -353,10 +294,6 @@ export class FlowModelService {
 			}
 			return a.label.localeCompare(b.label)
 		})
-
-		console.log(`[FlowModelService] Final model options (${options.length} total):`,
-			options.map(o => ({ value: o.value, label: o.label, provider: o.provider }))
-		)
 
 		return options
 	}

@@ -205,16 +205,6 @@ export function transformStreamChunk(provider: FlowProvider, chunk: any): ChatCo
  * Transform OpenAI-compatible streaming chunk
  */
 function transformOpenAIStreamChunk(chunk: any): ChatCompletionChunk {
-	console.log("🔄 [transformOpenAIStreamChunk] Transforming chunk:", {
-		chunkKeys: Object.keys(chunk),
-		chunkType: typeof chunk,
-		hasChoices: !!chunk.choices,
-		choicesCount: chunk.choices?.length || 0,
-		hasId: !!chunk.id,
-		hasObject: !!chunk.object,
-		rawChunk: JSON.stringify(chunk).substring(0, 500) + "...",
-	})
-
 	// Handle different OpenAI response formats
 	let choices = []
 
@@ -226,13 +216,11 @@ function transformOpenAIStreamChunk(chunk: any): ChatCompletionChunk {
 			// Standard streaming format
 			if (choice.delta?.content) {
 				content = choice.delta.content
-				console.log("✅ [transformOpenAIStreamChunk] Content from delta.content:", content)
 			}
 
 			// Complete response format (non-streaming)
 			if (choice.message?.content) {
 				content = choice.message.content
-				console.log("✅ [transformOpenAIStreamChunk] Content from message.content:", content)
 			}
 
 			return {
@@ -245,7 +233,6 @@ function transformOpenAIStreamChunk(chunk: any): ChatCompletionChunk {
 			}
 		})
 	} else {
-		console.log("⚠️ [transformOpenAIStreamChunk] No valid choices found, creating default")
 		choices = [{
 			index: 0,
 			delta: {
@@ -262,14 +249,6 @@ function transformOpenAIStreamChunk(chunk: any): ChatCompletionChunk {
 		model: chunk.model || "gpt-4o-mini",
 		choices,
 	}
-
-	console.log("🎯 [transformOpenAIStreamChunk] Result:", {
-		resultKeys: Object.keys(result),
-		choicesCount: result.choices.length,
-		deltaContent: result.choices[0]?.delta?.content || "",
-		contentLength: result.choices[0]?.delta?.content?.length || 0,
-		finishReason: result.choices[0]?.finish_reason,
-	})
 
 	return result
 }
@@ -301,20 +280,6 @@ function transformGeminiStreamChunk(chunk: any): ChatCompletionChunk {
  * Transform Bedrock streaming chunk
  */
 function transformBedrockStreamChunk(chunk: any): ChatCompletionChunk {
-	console.log("🔄 [transformBedrockStreamChunk] Transforming chunk:", {
-		chunkKeys: Object.keys(chunk),
-		chunkType: typeof chunk,
-		hasDelta: !!chunk.delta,
-		deltaKeys: chunk.delta ? Object.keys(chunk.delta) : [],
-		deltaText: chunk.delta?.text,
-		stopReason: chunk.stop_reason,
-		hasContent: !!chunk.content,
-		contentKeys: chunk.content ? Object.keys(chunk.content) : [],
-		hasType: !!chunk.type,
-		type: chunk.type,
-		rawChunk: JSON.stringify(chunk).substring(0, 500) + "...",
-	})
-
 	// Try different possible content paths for Bedrock
 	let content = ""
 	let finishReason: string | undefined = undefined
@@ -323,38 +288,21 @@ function transformBedrockStreamChunk(chunk: any): ChatCompletionChunk {
 	if (chunk.type === "content_block_delta" && chunk.delta?.text) {
 		// Standard Anthropic streaming format
 		content = chunk.delta.text
-		console.log("✅ [transformBedrockStreamChunk] Content from content_block_delta.delta.text:", content)
 	} else if (chunk.type === "message_delta" && chunk.delta?.stop_reason) {
 		// Message completion
 		finishReason = chunk.delta.stop_reason === "end_turn" ? "stop" : chunk.delta.stop_reason
-		console.log("✅ [transformBedrockStreamChunk] Finish reason from message_delta:", finishReason)
 	} else if (chunk.delta?.text) {
 		// Generic delta format
 		content = chunk.delta.text
-		console.log("✅ [transformBedrockStreamChunk] Content from delta.text:", content)
 	} else if (chunk.content?.[0]?.text) {
 		// Content array format
 		content = chunk.content[0].text
-		console.log("✅ [transformBedrockStreamChunk] Content from content[0].text:", content)
 	} else if (chunk.text) {
 		// Direct text format
 		content = chunk.text
-		console.log("✅ [transformBedrockStreamChunk] Content from text:", content)
-	} else if (chunk.type === "message_start") {
-		// Message start - no content yet
-		console.log("🚀 [transformBedrockStreamChunk] Message start detected")
-	} else if (chunk.type === "content_block_start") {
-		// Content block start - no content yet
-		console.log("🚀 [transformBedrockStreamChunk] Content block start detected")
-	} else if (chunk.type === "content_block_stop") {
-		// Content block stop - no content
-		console.log("🛑 [transformBedrockStreamChunk] Content block stop detected")
 	} else if (chunk.type === "message_stop") {
 		// Message stop - final chunk
 		finishReason = "stop"
-		console.log("🏁 [transformBedrockStreamChunk] Message stop detected")
-	} else {
-		console.log("⚠️ [transformBedrockStreamChunk] No content found in chunk")
 	}
 
 	// Use existing stop_reason if no finishReason was set
@@ -377,14 +325,6 @@ function transformBedrockStreamChunk(chunk: any): ChatCompletionChunk {
 			},
 		],
 	}
-
-	console.log("🎯 [transformBedrockStreamChunk] Result:", {
-		resultKeys: Object.keys(result),
-		choicesCount: result.choices.length,
-		deltaContent: result.choices[0].delta.content,
-		contentLength: result.choices[0].delta.content.length,
-		finishReason: result.choices[0].finish_reason,
-	})
 
 	return result
 }

@@ -57,14 +57,6 @@ function generateAzureOpenAIPayload(options: FlowChatCompletionOptions, config: 
 	const modelId = options.model || config.apiModelId || "gpt-4o-mini"
 	const isO1Model = isO1OrO3Model(modelId)
 
-	console.log("🔧 [generateAzureOpenAIPayload] Generating payload:", {
-		modelId,
-		isO1Model,
-		messagesCount: options.messages.length,
-		hasTemperature: options.temperature !== undefined,
-		hasStream: options.stream !== undefined,
-	})
-
 	// Handle o1 models specially - they have different message format requirements
 	let messages
 	if (isO1Model) {
@@ -88,11 +80,6 @@ function generateAzureOpenAIPayload(options: FlowChatCompletionOptions, config: 
 				role: msg.role,
 				content,
 			}
-		})
-
-		console.log("🎯 [generateAzureOpenAIPayload] o1 model - merged system messages:", {
-			systemContentLength: systemContent.length,
-			finalMessagesCount: messages.length,
 		})
 	} else {
 		// Standard message format for non-o1 models
@@ -119,15 +106,6 @@ function generateAzureOpenAIPayload(options: FlowChatCompletionOptions, config: 
 	} else if (config.apiModelId) {
 		payload.allowedModels = [config.apiModelId]
 	}
-
-	console.log("✅ [generateAzureOpenAIPayload] Payload generated:", {
-		modelId,
-		isO1Model,
-		hasTemperature: "temperature" in payload,
-		hasStream: "stream" in payload,
-		messagesCount: payload.messages.length,
-		payloadKeys: Object.keys(payload),
-	})
 
 	return payload
 }
@@ -207,13 +185,6 @@ function generateBedrockPayload(options: FlowChatCompletionOptions, config: Flow
 	const modelId = options.model || config.apiModelId || "anthropic.claude-3-sonnet"
 	const isNova = isNovaModel(modelId)
 
-	console.log("🔧 [generateBedrockPayload] Generating payload:", {
-		modelId,
-		isNova,
-		messagesCount: options.messages.length,
-		hasTemperature: options.temperature !== undefined,
-	})
-
 	// Extract system message if present
 	let systemMessage = ""
 	const userMessages = []
@@ -250,15 +221,6 @@ function generateBedrockPayload(options: FlowChatCompletionOptions, config: Flow
 	if (systemMessage) {
 		payload.system = systemMessage
 	}
-
-	console.log("✅ [generateBedrockPayload] Payload generated:", {
-		modelId,
-		isNova,
-		hasAnthropicVersion: !!payload.anthropic_version,
-		hasSystem: !!payload.system,
-		messagesCount: payload.messages.length,
-		payloadKeys: Object.keys(payload),
-	})
 
 	return payload
 }

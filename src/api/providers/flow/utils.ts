@@ -1,12 +1,33 @@
 /**
- * Debug logging utility for Flow provider
+ * Create a conditional logger for Flow components
+ * @param component Component name for logging context
+ * @returns Logger object with conditional methods
+ */
+export function createLogger(component: string) {
+	const isDev = process.env.NODE_ENV === 'development'
+	const logLevel = process.env.FLOW_LOG_LEVEL || 'info'
+	const isDebugEnabled = process.env.DEBUG === "true" || process.env.FLOW_DEBUG === "true"
+
+	return {
+		debug: (isDev && (logLevel === 'debug' || isDebugEnabled))
+			? (msg: string, data?: any) => console.log(`🔍 [${component}] ${msg}`, data || "")
+			: () => {},
+		info: (msg: string, data?: any) => console.info(`ℹ️ [${component}] ${msg}`, data || ""),
+		warn: (msg: string, data?: any) => console.warn(`⚠️ [${component}] ${msg}`, data || ""),
+		error: (msg: string, data?: any) => console.error(`❌ [${component}] ${msg}`, data || ""),
+		// Security logs are always active
+		security: (msg: string, data?: any) => console.info(`🔒 [${component}] ${msg}`, data || "")
+	}
+}
+
+/**
+ * Debug logging utility for Flow provider (legacy compatibility)
  * @param message Debug message
  * @param data Optional data to log
  */
 export function debug(message: string, data?: any): void {
-	if (process.env.DEBUG === "true" || process.env.FLOW_DEBUG === "true") {
-		console.log(`[Flow] ${message}`, data || "")
-	}
+	const logger = createLogger('Flow')
+	logger.debug(message, data)
 }
 
 /**
@@ -139,56 +160,24 @@ export async function retryWithBackoff<T>(
  * @returns Parsed data or null if invalid
  */
 export function parseSSEChunk(chunk: string): any | null {
-	console.log("🔍 [parseSSEChunk] Parsing chunk:", {
-		chunkLength: chunk.length,
-		chunkPreview: chunk.substring(0, 300) + (chunk.length > 300 ? "..." : ""),
-		startsWithData: chunk.trim().startsWith("data:"),
-		startsWithBrace: chunk.trim().startsWith("{"),
-		containsDataLines: chunk.includes("data: "),
-		hasNewlines: chunk.includes("\n"),
-	})
-
 	// Skip empty or whitespace-only chunks
 	const trimmedChunk = chunk.trim()
 	if (!trimmedChunk) {
-		console.log("⚠️ [parseSSEChunk] Empty chunk, skipping")
 		return null
 	}
 
 	// First, try to detect if this is a complete JSON response (Flow Bedrock format)
 	if (trimmedChunk.startsWith("{") && trimmedChunk.endsWith("}")) {
-		console.log("🎯 [parseSSEChunk] Detected complete JSON response format")
 		try {
 			const parsed = JSON.parse(trimmedChunk)
-			console.log("✅ [parseSSEChunk] Successfully parsed complete JSON:", {
-				parsedKeys: Object.keys(parsed),
-				parsedType: typeof parsed,
-				hasType: !!parsed.type,
-				hasContent: !!parsed.content,
-				hasDelta: !!parsed.delta,
-			})
 			return parsed
 		} catch (error) {
-			console.error("❌ [parseSSEChunk] Failed to parse complete JSON:", {
-				chunk: trimmedChunk.substring(0, 200) + "...",
-				error: sanitizeError(error),
-			})
+			// Continue to SSE parsing if JSON parsing fails
 		}
 	}
 
 	// Handle traditional SSE parsing with improved line processing
 	const lines = chunk.split("\n")
-
-	console.log("📋 [parseSSEChunk] Lines found for SSE parsing:", {
-		lineCount: lines.length,
-		lines: lines.map((line, index) => ({
-			index,
-			length: line.length,
-			preview: line.substring(0, 100) + (line.length > 100 ? "..." : ""),
-			startsWithData: line.startsWith("data: "),
-			isEmpty: line.trim() === "",
-		})),
-	})
 
 	// Process each line looking for valid SSE data
 	for (let i = 0; i < lines.length; i++) {
@@ -196,40 +185,20 @@ export function parseSSEChunk(chunk: string): any | null {
 
 		if (line.startsWith("data: ")) {
 			const data = line.slice(6).trim()
-			console.log("📦 [parseSSEChunk] SSE data line found:", {
-				lineIndex: i,
-				dataLength: data.length,
-				dataPreview: data.substring(0, 200) + (data.length > 200 ? "..." : ""),
-				isDone: data === "[DONE]",
-				isJson: data.startsWith("{") && data.endsWith("}"),
-			})
 
 			if (data === "[DONE]") {
-				console.log("🏁 [parseSSEChunk] DONE marker found")
 				return null
 			}
 
 			// Skip empty data lines
 			if (!data) {
-				console.log("⚠️ [parseSSEChunk] Empty data line, skipping")
 				continue
 			}
 
 			try {
 				const parsed = JSON.parse(data)
-				console.log("✅ [parseSSEChunk] Successfully parsed SSE JSON:", {
-					parsedKeys: Object.keys(parsed),
-					parsedType: typeof parsed,
-					hasChoices: !!parsed.choices,
-					choicesCount: parsed.choices?.length || 0,
-				})
 				return parsed
 			} catch (error) {
-				console.error("❌ [parseSSEChunk] Failed to parse SSE JSON:", {
-					lineIndex: i,
-					data: data.substring(0, 200) + "...",
-					error: sanitizeError(error),
-				})
 				debug("Failed to parse SSE chunk", { chunk: data, error: sanitizeError(error) })
 				// Continue to next line instead of returning null immediately
 				continue
@@ -237,16 +206,6 @@ export function parseSSEChunk(chunk: string): any | null {
 		}
 	}
 
-	// Check if this might be a fragment of a larger chunk
-	if (trimmedChunk.length > 0 && !trimmedChunk.includes("data: ") && !trimmedChunk.startsWith("{")) {
-		console.log("🔄 [parseSSEChunk] Possible chunk fragment detected:", {
-			chunkLength: trimmedChunk.length,
-			chunkContent: trimmedChunk,
-			suggestion: "This might be part of a larger SSE message",
-		})
-	}
-
-	console.log("⚠️ [parseSSEChunk] No valid data found in chunk")
 	return null
 }
 

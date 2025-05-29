@@ -148,8 +148,8 @@ export class FlowRequestBuilder implements IFlowRequestBuilder {
 			validatePayload(provider as any, payload)
 			return true
 		} catch (error) {
-			// Log validation error for debugging
-			console.debug(`Payload validation failed for provider ${provider}:`, error instanceof Error ? error.message : String(error))
+			// Use debug utility instead of console.debug
+			debug(`Payload validation failed for provider ${provider}`, { error: error instanceof Error ? error.message : String(error) })
 			return false
 		}
 	}
